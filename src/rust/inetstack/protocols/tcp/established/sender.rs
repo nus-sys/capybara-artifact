@@ -203,8 +203,22 @@ impl Sender {
             return Err(Fail::new(EBUSY, "too many packets to send"));
         }
         self.unsent_seq_no.modify(|s| s + SeqNumber::from(buf_len));
-        if self.send_window.get() > 0 {
-            self.send_segment(cb, cb.clock.now(), &mut buf);
+        // fig10: SEND_VIA_BG=1 routes all data through the background sender
+        // (single MSS-chunked ordered path; the immediate-path/bg interleave
+        // wedges connections for responses larger than the initial cwnd).
+        let send_via_bg: bool = std::env::var("SEND_VIA_BG").map(|v| v == "1").unwrap_or(false);
+        // fig10 ordering fix: if older data is still queued for the background
+        // sender, the immediate path must not transmit newer bytes first
+        // (out-of-order emission caused fast-retransmission storms / wedges).
+        let queue_empty = self.unsent_queue.borrow().is_empty();
+        if !send_via_bg && queue_empty {
+            // fig10: drain the whole push on the immediate path (MSS-sized segments)
+            // so large responses never split across the immediate/background paths.
+            while buf.len() > 0 && self.send_window.get() > 0 {
+                if self.send_segment(cb, cb.clock.now(), &mut buf) == 0 {
+                    break;
+                }
+            }
         }// comment out this send_segement to enforce FE-proxy of run-to-completion push
         capy_log!("WARNINIG: TOO FAST, remaining buf.len(): {}, unsent_queue_len: {}", buf.len(), self.unsent_queue.borrow().len());
         if buf.len() > 0 {
@@ -227,9 +241,11 @@ impl Sender {
         let buf_len: usize = segment.len();
         debug_assert_ne!(buf_len, 0);
         // Check window size.
+        // fig10: clamp immediate-path frames to MSS (large responses were emitted as
+        // single window-sized frames, exceeding mbuf/MTU limits downstream).
         let max_frame_size_bytes: usize = match self.get_open_window_size_bytes(cb) {
             0 => return 0,
-            size => size,
+            size => std::cmp::min(size, self.mss),
         };
 
         // Split the packet if necessary.

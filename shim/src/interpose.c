@@ -61,6 +61,11 @@
             return (fn_libc(__VA_ARGS__));                           \
         }                                                            \
                                                                      \
+        if (UNLIKELY(ctor_phase_done == 0))                          \
+        {                                                            \
+            return (fn_libc(__VA_ARGS__));                           \
+        }                                                            \
+                                                                     \
         init();                                                      \
                                                                      \
         INTERPOSE_CALL2(type, fn_libc, fn_demi, __VA_ARGS__);        \
@@ -103,6 +108,17 @@ static volatile uint8_t in_init_libc = 0;
 
 static volatile uint8_t initialized = 0;
 static volatile uint8_t in_init = 0;
+
+/* fig9: do not trigger demikernel/EAL init from inside shared-library
+ * constructors (e.g. mlx5 PMD registration reads sysfs through our read()
+ * interposer, which used to fire __demi_init before the PMD finished
+ * registering -> EAL probe found no ethernet ports). All interposed calls
+ * pass through to libc until every constructor has run. */
+static volatile uint8_t ctor_phase_done = 0;
+static void __attribute__((constructor(65535))) __shim_ctor_phase_done(void)
+{
+    ctor_phase_done = 1;
+}
 
 static inline void init_libc(void)
 {

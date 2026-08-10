@@ -367,7 +367,7 @@ fn server(local: SocketAddrV4) -> Result<()> {
     ctrlc::set_handler(move || {
         eprintln!("Received Ctrl-C signal.");
         // LibOS::dpdk_print_eth_stats();
-        // LibOS::capylog_dump(&mut std::io::stderr().lock());
+        LibOS::capylog_dump(&mut std::io::stderr().lock());
         std::process::exit(0);
     }).expect("Error setting Ctrl-C handler");
     // unsafe { START_TIME = Some(Instant::now()); }
