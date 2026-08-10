@@ -39,6 +39,9 @@ pub struct Stats {
     /// TEMP TEST: Max number of connections to migrate for this test.
     max_proactive_migrations: Option<i32>,
     max_reactive_migrations: Option<i32>,
+    /// fig8: min interval between reactive extractions (ms, env REACTIVE_COOLDOWN_MS)
+    reactive_cooldown_ms: u64,
+    last_reactive_extract: Option<std::time::Instant>,
 }
 
 #[derive(Debug)]
@@ -134,6 +137,9 @@ impl Stats {
             max_reactive_migrations: std::env::var("MAX_REACTIVE_MIGS")
                 .map(|e| Some(e.parse().expect("MAX_REACTIVE_MIGS should be a number")))
                 .unwrap_or(None),
+            reactive_cooldown_ms: std::env::var("REACTIVE_COOLDOWN_MS").ok()
+                .and_then(|v| v.parse().ok()).unwrap_or(0),
+            last_reactive_extract: None,
         }
     }
 
@@ -237,7 +243,13 @@ impl Stats {
     /// Returns `None` if no connections need to be migrated.
     #[cfg(not(feature = "manual-tcp-migration"))]
     pub fn connections_to_reactively_migrate(&mut self) -> Option<ArrayVec<(SocketAddrV4, SocketAddrV4), MAX_EXTRACTED_CONNECTIONS>> {
-        return None;
+        if self.reactive_cooldown_ms > 0 {
+            if let Some(t) = self.last_reactive_extract {
+                if t.elapsed().as_millis() < self.reactive_cooldown_ms as u128 {
+                    return None;
+                }
+            }
+        }
         if let Some(val) = self.max_reactive_migrations {
             if val <= 0 {
                 return None;
@@ -285,6 +297,9 @@ impl Stats {
 
         self.avg_global_stat.update(self.global_stat);
 
+        if !conns.is_empty() {
+            self.last_reactive_extract = Some(std::time::Instant::now());
+        }
         Some(conns)
     }
 

@@ -531,7 +531,7 @@ impl InetStack {
             // Poll first, so as to give pending operations a chance to complete.
             // capy_log!("START6");
             self.scheduler.poll();
-            self.poll_bg_work(); // comment for Redis eval, uncomment for FE-proxy (or other native applications) eval
+            // self.poll_bg_work(); // fig9: commented for Redis eval (see marker)
 
             // The operation has completed, so extract the result and return.
             if handle.has_completed() {
@@ -877,14 +877,12 @@ impl InetStack {
             self.ipv4.tcp.rps_signal_action();
         
             // If overloaded, start migrations.
-            /* comment out this for recv_queue_len vs mig_lat eval */
-            // #[cfg(not(feature = "manual-tcp-migration"))]
-            // if let Some(conns_to_migrate) = self.ipv4.tcp.connections_to_reactively_migrate() {
-            //     for conn in conns_to_migrate {
-            //         self.ipv4.tcp.initiate_migration_by_addr(conn);
-            //     }
-            // }
-            /* comment out this for recv_queue_len vs mig_lat eval */
+            #[cfg(not(feature = "manual-tcp-migration"))]
+            if let Some(conns_to_migrate) = self.ipv4.tcp.connections_to_reactively_migrate() {
+                for conn in conns_to_migrate {
+                    self.ipv4.tcp.initiate_migration_by_addr(conn);
+                }
+            }
 
             // self.ipv4.tcp.large_scale_migrate();
         }
