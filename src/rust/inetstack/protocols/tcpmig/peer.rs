@@ -428,19 +428,17 @@ impl TcpMigPeer {
     pub fn initiate_migration(&mut self, conn: (SocketAddrV4, SocketAddrV4), qd: QDesc) {
         let (local, remote) = conn;
 
-        // Always send PREPARE_MIG to 10.0.1.8:10000
-        let target_ip = Ipv4Addr::new(10, 0, 1, 8);
-        let target_port = 10000u16;
-        capy_time_log!("INIT_MIG,({}),[{}->{}:{}]", remote, local, target_ip, target_port);
+        // Always send PREPARE_MIG to switch - switch will decide the target
+        capy_time_log!("INIT_MIG,({}),[{}->switch]", remote, local);
 
         let active = ActiveMigration::new(
             self.rt.clone(),
             self.local_ipv4_addr,
             self.local_link_addr,
-            target_ip,
-            NODE8_MAC,
+            SWITCH_IP,
+            SWITCH_MAC,
             self.self_udp_port,
-            target_port,
+            DEST_UDP_PORT,  // Switch UDP port
             local,
             remote,
             Some(qd),
