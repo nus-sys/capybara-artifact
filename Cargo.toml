@@ -1,0 +1,211 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
+
+#=======================================================================================================================
+# Package
+#=======================================================================================================================
+
+[package]
+name = "demikernel"
+version = "1.0.20"
+authors = ["Microsoft Corporation"]
+edition = "2021"
+description = "Kernel-Bypass LibOS Architecture"
+readme = "README.md"
+homepage = "https://aka.ms/demikernel"
+repository = "https://github.com/demikernel/demikernel"
+license-file = "LICENSE.txt"
+
+#=======================================================================================================================
+# Dependencies
+#=======================================================================================================================
+
+[dependencies]
+
+# Third Party
+arrayvec = "0.7.2"
+async-trait = "0.1.57"
+anyhow = "1.0.65"
+bit-iter = "1.1.1"
+bit-vec = "0.6.3"
+byteorder = "1.4.3"
+cfg-if = "1.0.0"
+chrono = "0.4.3"
+colored = "2.0"
+crc = "3.0.0"
+clap = "3.2.22"
+crossbeam-channel = "0.5.6"
+ctrlc = "3.2.1"
+derive_more = "0.99.17"
+eui48 = "1.1.0"
+flexi_logger = "0.24.2"
+futures = "0.3.25"
+libc = "0.2.138"
+log = "0.4.17"
+nix = "0.25.0"
+num-derive = "0.3.3"
+num-traits = "0.2.15"
+rand = { version = "0.8.5", features = ["small_rng"] }
+slab = "0.4.7"
+yaml-rust = "0.4.5"
+x86 = "0.51.0"
+lazy_static = "1.4"
+
+# Demikernel Organization
+liburing = { git = "https://github.com/demikernel/liburing-rs", rev = "780827ee3f805d94f9909bd47cd925ee8476a64b", optional = true}
+dpdk-rs = { git = "https://github.com/demikernel/dpdk-rs", rev = "7d75ce6db61351d2a06fa3d84bd0af3ec017166d", optional = true }
+
+#=======================================================================================================================
+# Targets
+#=======================================================================================================================
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/rust/lib.rs"
+
+#[[test]]
+#name = "tcp"
+#path = "tests/rust/tcp.rs"
+
+#[[test]]
+#name = "udp"
+#path = "tests/rust/udp.rs"
+
+#[[test]]
+#name = "sga"
+#path = "tests/rust/sga.rs"
+
+[[example]]
+name = "udp-dump"
+path = "examples/rust/udp-dump.rs"
+
+[[example]]
+name = "udp-echo"
+path = "examples/rust/udp-echo.rs"
+
+[[example]]
+name = "udp-pktgen"
+path = "examples/rust/udp-pktgen.rs"
+
+[[example]]
+name = "udp-relay"
+path = "examples/rust/udp-relay.rs"
+
+[[example]]
+name = "udp-push-pop"
+path = "examples/rust/udp-push-pop.rs"
+
+[[example]]
+name = "udp-ping-pong"
+path = "examples/rust/udp-ping-pong.rs"
+
+[[example]]
+name = "tcp-dump"
+path = "examples/rust/tcp-dump.rs"
+
+[[example]]
+name = "tcp-echo"
+path = "examples/rust/tcp-echo.rs"
+
+[[example]]
+name = "tcp-pktgen"
+path = "examples/rust/tcp-pktgen.rs"
+
+[[example]]
+name = "tcp-push-pop"
+path = "examples/rust/tcp-push-pop.rs"
+
+[[example]]
+name = "tcp-ping-pong"
+path = "examples/rust/tcp-ping-pong.rs"
+
+[[example]]
+name = "tcp-migration"
+path = "examples/rust/tcp-migration.rs"
+
+[[example]]
+name = "tcp-migration-ping-pong"
+path = "examples/rust/tcp-migration-ping-pong.rs"
+
+[[example]]
+name = "tcpmig-server-multi"
+path = "examples/rust/tcpmig-server-multi.rs"
+
+[[example]]
+name = "tcpmig-server-single"
+path = "examples/rust/tcpmig-server-single.rs"
+
+[[example]]
+name = "tcpmig-client"
+path = "examples/rust/tcpmig-client.rs"
+
+[[example]]
+name = "dpdk-ctrl"
+path = "examples/rust/dpdk-ctrl.rs"
+
+[[example]]
+name = "http-server"
+path = "examples/rust/http-server.rs"
+
+[[example]]
+name = "capybara-switch"
+path = "examples/rust/capybara-switch.rs"
+
+[[example]]
+name = "proxy-server-fe"
+path = "examples/rust/proxy-server-fe.rs"
+
+[[example]]
+name = "proxy-server-be"
+path = "examples/rust/proxy-server-be.rs"
+
+#=======================================================================================================================
+# Features
+#=======================================================================================================================
+
+[features]
+default = [ "catnap-libos" ]
+catnap-libos = [ ]
+catpowder-libos = [ ]
+catcollar-libos = [ "liburing" ]
+catnip-libos = [ "libdpdk" ]
+libdpdk = [ "dpdk-rs" ]
+mlx4 = [ "dpdk-rs/mlx4" ]
+mlx5 = [ "dpdk-rs/mlx5" ]
+profiler = [ ]
+
+tcp-migration = [ ]
+manual-tcp-migration = [ "tcp-migration" ]
+capy-profile = [ ]
+capy-log = [ ]
+capy-time-log = [ ]
+server-reply-analysis = [ ]
+capybara-switch = [ ]
+
+#=======================================================================================================================fe
+# Profile
+#=======================================================================================================================
+
+# Build profile used for releases.
+[profile.release]
+opt-level = 3             # Enable all compiler optimizations.
+debug = false             # Do not include any debug info in the binary.
+debug-assertions = false  # Do not include any debug assertions in the binary.
+overflow-checks = false   # Do not check for overflows at runtime.
+lto = "fat"               # Perform link time optimizations across all dependencies (overridden).
+panic = "abort"           # Terminate the process upon panic (overridden).
+incremental = false       # Disable incremental compilation.
+codegen-units = 1         # Produce a single code generation unit (overridden).
+rpath = false             # Disable runtime search path.
+
+# Build profile used for development and debugging.
+[profile.dev]
+opt-level = 0             # Disable all compiler optimizations.
+debug = true              # Output full debug info in the binary.
+debug-assertions = true   # Include debug assertions in the binary.
+overflow-checks = true    # Check for overflows at runtime.
+lto = "off"               # Disable link time optimization (overridden).
+panic = 'unwind'          # Unwind the stack upon panic.
+incremental = true        # Incremental build.
+codegen-units = 256       # Produce multiple code generation units.
+rpath = false             # Disable runtime search path.
