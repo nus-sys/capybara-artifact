@@ -1,6 +1,8 @@
 # Capybara: Dynamic Load Balancing with Microsecond-Scale TCP Migration
 
-Source release and artifact-evaluation kit for the SIGCOMM 2026 paper. Capybara
+Source release and artifact-evaluation kit for the SIGCOMM 2026 paper. The
+evaluated snapshot is release
+[`sigcomm26-ae-v1.2`](https://github.com/nus-sys/capybara-artifact/releases/tag/sigcomm26-ae-v1.2). Capybara
 is an L4 load balancer that rebalances established TCP connections through
 microsecond-scale live connection migration, co-designed between a P4
 programmable switch and a kernel-bypass host stack (built on
@@ -62,6 +64,7 @@ that run's data, and restores the cluster to a clean baseline.
 | `AE/figN/` | one directory per figure: `run_figN.sh`, its helpers, a README with expected results, and the authors' reference measurements |
 | `AE/sample-data/`, `AE/sample-figures/` | measurements from the authors' runs and the figures drawn from them |
 | `AE/plot_from_samples.sh`, `AE/paperplot/` | redraw every figure from the sample data with the paper's own plotting code, no hardware needed (`pip install -r AE/requirements.txt`) |
+| `AE/check_cluster.sh` | read-only preflight of the testbed state |
 | `AE/cleanup_all.sh`, `AE/arm_watchdog.sh` | restore the cluster from any state; deadman timer |
 | `AE/switch/` | the per-figure Tofino programs and control-plane scripts as they exist on the switch |
 | `AE/source/` | which branch, commit, diff and binary produced each figure (`SOURCE.md`) |

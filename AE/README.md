@@ -84,6 +84,8 @@ hardware/software description.
 
 ## Practical notes
 
+- `bash check_cluster.sh` (read-only, ~20 s) tells you whether the testbed is in the
+  expected state before you start; WARN lines are things the runners fix themselves.
 - Every runner first calls `prepare_nodes.sh`, which restores what a host reboot
   clears on the client nodes (ksched module, iokernel sysctls, hugepages, data-NIC
   link). It is idempotent; run it by hand if a runner reports `client nodes not ready`.
