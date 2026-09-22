@@ -40,6 +40,9 @@ done
 if [ "$FLEET" != "12" ]; then echo "RES $COND $SZ $RPS FLEET_FAIL 0"; exit 1; fi
 
 # 2) clients on node5/6/7 (240 conns each, per-server loadshift groups)
+# fresh iokernel on node5/6 for every measurement (see restart_client_iokernel.sh)
+bash ~/capybara-AE-runs/restart_client_iokernel.sh 5 /homes/inho/Capybara/caladan-fig8-n6 || { echo "RES $COND $SZ $RPS IOK5_FAIL 0"; exit 1; }
+bash ~/capybara-AE-runs/restart_client_iokernel.sh 6 /homes/inho/Capybara/caladan-fig8-n6 || { echo "RES $COND $SZ $RPS IOK6_FAIL 0"; exit 1; }
 CMD="--mode runtime-client --protocol=http --transport=tcp --samples=1 --pps=10 --threads=240 --runtime=$RUNTIME --discard_pct=0 --output=buckets --rampup=0 --zipf=1.2 --loadshift=$LS --exptid=/tmp/ae-f10x"
 ssh node5 "tmux kill-session -t cl5 2>/dev/null; sudo pkill -x synthetic 2>/dev/null; sudo rm -f /tmp/ae-f10.log /tmp/ae-f10x.latency /tmp/ae-f10x.latency_raw; tmux new-session -d -s cl5 \"cd /homes/inho/Capybara/caladan-fig8 && sudo timeout 300 env LD_LIBRARY_PATH=\\/homes/inho/lib numactl -m0 apps/synthetic/target-fig10/release/synthetic 10.0.1.8:55555 --config client_node5.config $CMD > /tmp/ae-f10.log 2>&1\"" >/dev/null 2>&1
 ssh node6 "tmux kill-session -t cl6 2>/dev/null; sudo pkill -x synthetic 2>/dev/null; sudo rm -f /tmp/ae-f10.log /tmp/ae-f10x.latency /tmp/ae-f10x.latency_raw; tmux new-session -d -s cl6 \"cd /homes/inho/Capybara/caladan-fig8 && sudo timeout 300 numactl -m0 apps/synthetic/target-fig10/release/synthetic 10.0.1.8:55555 --config client_node6.config $CMD > /tmp/ae-f10.log 2>&1\"" >/dev/null 2>&1
