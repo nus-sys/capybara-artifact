@@ -81,6 +81,12 @@ printf "node%s ok: kernel=%s ksched=%s hugepages=%s nic=%s %s\n" "$N" "$KREL" \
 EOF
 PREP=${PREP//__KO_DIR__/$KO_DIR}
 
+# switch host: the SDE's bf_kpkt kernel module is not loaded at boot (sw1 has not
+# rebooted since 2024, but if it ever does, run_switchd fails with "device_add"
+# errors until the module is back). Idempotent; needs sudo on sw1, which the
+# reviewer account has.
+ssh -o ConnectTimeout=8 sw1 'if lsmod | grep -q "^bf_kpkt"; then echo "sw1 ok: bf_kpkt loaded"; else sudo /home/singtel/bf-sde-9.4.0/install/bin/bf_kpkt_mod_load /home/singtel/bf-sde-9.4.0/install && echo "sw1 ok: bf_kpkt loaded now" || echo "sw1: could not load bf_kpkt"; fi' 2>/dev/null || echo "sw1: unreachable (runners will fail at switch bring-up)"
+
 rc=0
 for N in $NODES; do
   if [ "$N" = "$(hostname | sed 's/.*node//')" ]; then
