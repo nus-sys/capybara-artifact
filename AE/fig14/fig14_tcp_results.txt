@@ -1,0 +1,15 @@
+miglattcp2-0-sweep: 2000 migrations
+  origin CPU   0.95 us   target CPU   1.34 us   network   7.78 us
+  server CPU   2.30 us   total  10.08 us   blackout   4.24 us
+miglattcp2-16384-sweep: 2000 migrations
+  origin CPU   2.53 us   target CPU   1.47 us   network  15.85 us
+  server CPU   4.00 us   total  19.84 us   blackout  13.69 us
+miglattcp2-32768-sweep: 2000 migrations
+  origin CPU   2.73 us   target CPU   1.43 us   network  21.23 us
+  server CPU   4.16 us   total  25.40 us   blackout  19.23 us
+miglattcp2-65536-sweep: 2000 migrations
+  origin CPU   3.27 us   target CPU   1.49 us   network  31.81 us
+  server CPU   4.76 us   total  36.57 us   blackout  30.41 us
+miglattcp2-131072-sweep: 2000 migrations
+  origin CPU   2.75 us   target CPU   1.55 us   network  53.41 us
+  server CPU   4.30 us   total  57.70 us   blackout  51.52 us

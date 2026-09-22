@@ -1,0 +1,25 @@
+diff --git a/deps/pcm b/deps/pcm
+--- a/deps/pcm
++++ b/deps/pcm
+@@ -1 +1 @@
+-Subproject commit e54cac6c97e93516f9ce6a897670c51934af709e
++Subproject commit e54cac6c97e93516f9ce6a897670c51934af709e-dirty
+diff --git a/dpdk b/dpdk
+--- a/dpdk
++++ b/dpdk
+@@ -1 +1 @@
+-Subproject commit 80c5b4d6355d1dbece8dd1f812d374f3e24086bc
++Subproject commit 80c5b4d6355d1dbece8dd1f812d374f3e24086bc-dirty
+diff --git a/rdma-core b/rdma-core
+index 53ee89b..33b576e 160000
+--- a/rdma-core
++++ b/rdma-core
+@@ -1 +1 @@
+-Subproject commit 53ee89b4abb1463e7ae713103f552b2bef1307ce
++Subproject commit 33b576e65340c57933cf5b6f34e6ecbd733f097c
+diff --git a/spdk b/spdk
+--- a/spdk
++++ b/spdk
+@@ -1 +1 @@
+-Subproject commit 797ff94b2351458ced0e15f440198cacd510b2fe
++Subproject commit 797ff94b2351458ced0e15f440198cacd510b2fe-dirty

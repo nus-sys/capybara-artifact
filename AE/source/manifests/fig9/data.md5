@@ -1,0 +1,16 @@
+fc98c6ec9226469d5ca0f4961becd41c  fig9CAPY-run1.be0
+7e2365f13c08d5e300753dd2fc4f7938  fig9CAPY-run1.be1
+7cd0bf71314cd7045036bfe77b8404df  fig9CAPY-run1.client
+ab7e98956ccffa0f577d49ec5171d529  fig9CAPY-run1.lat_cdf
+8af54b3702945dc0d87749997ed7b58a  fig9CAPY-run1.latency
+4c8c837eed7dc2c4803c7e204b7025db  fig9CAPY-run1.latency_raw
+491c4526576363672014e702ed24e572  fig9CAPY-run1.latency_trace
+46390b2f209d5f640b563f132b8237ba  fig9CAPY-run1.request_sched
+27785f17dbf982064430ffc617eeb308  fig9LWRR-run1.be0
+601ba2b25b5534a6428ecbb2e672e34c  fig9LWRR-run1.be1
+122d006cb4ea41e7491c6863bc2e5d53  fig9LWRR-run1.client
+e379858641f95b869909e4ddfdcde6c9  fig9LWRR-run1.lat_cdf
+0060a1c71c6896e343a7bbc4f866dc74  fig9LWRR-run1.latency
+9e8beb880681b579d2128653a9f3f5f6  fig9LWRR-run1.latency_raw
+66a50cf6bfeb0244c219aa34740d221a  fig9LWRR-run1.latency_trace
+af9f77b735dd6ed8a4f9c497cc58d81e  fig9LWRR-run1.request_sched

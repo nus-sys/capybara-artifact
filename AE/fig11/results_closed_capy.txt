@@ -1,0 +1,5 @@
+RES capy closed NB=1 c=50 rps=33840.69 gbps=33.04 p99=287.32ms errlines=1
+RES capy closed NB=2 c=70 rps=34967.90 gbps=34.16 p99=112.02ms errlines=1
+RES capy closed NB=2 c=70 rps=272.37 gbps=0.273 p99=1.41ms errlines=0
+RES capy closed NB=2 c=70 rps=40298.89 gbps=39.36 p99=38.54ms errlines=1
+RES capy closed NB=4 c=100 rps=94725.13 gbps=92.56 p99=1.72ms errlines=1

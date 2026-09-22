@@ -1,0 +1,11 @@
+p4 = bfrt.main_eval_fig8.pipe
+print("=== reg_min_rps ===")
+p4.Egress.reg_min_rps.dump(from_hw=True)
+print("=== reg_min_rps_server_ip ===")
+p4.Egress.reg_min_rps_server_ip.dump(from_hw=True)
+print("=== reg_min_rps_server_port ===")
+p4.Egress.reg_min_rps_server_port.dump(from_hw=True)
+print("=== mgid dump ===")
+bfrt.pre.mgid.dump()
+print("=== node dump ===")
+bfrt.pre.node.dump()

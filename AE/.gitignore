@@ -1,0 +1,23 @@
+# build outputs and frozen binaries live on disk / NFS, not in git
+*-frozen/bin/
+*-frozen/switch/
+*.elf
+*.so
+*.tgz
+*.pdf
+*.png
+iokerneld*
+synthetic*
+# volatile run logs
+*.log
+fig7/final*.log
+
+# Frozen raw traces: multi-MB per run, kept on disk (NFS) and md5-manifested,
+# but not versioned. The files the plotters read are versioned.
+fig*-frozen/data/*.latency_trace
+fig*-frozen/data/*.latency_raw
+fig*-frozen/data/*.request_sched
+fig*-frozen/data/*.server_reply*
+pyenv-lib/
+__pycache__/
+sample-figures/

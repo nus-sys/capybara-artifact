@@ -1,0 +1,6 @@
+RES prismstar closed NB=2 c=20 rps=58114.07 gbps=56.8 p99=251.00us errlines=0
+RES prismstar closed NB=2 c=50 rps=60701.24 gbps=59.28 p99=637.00us errlines=0
+RES prismstar closed NB=2 c=100 SANITY-FAIL
+RES prismstar closed NB=4 c=50 rps=92296.87 gbps=90.16 p99=425.00us errlines=0
+RES prismstar closed NB=4 c=100 rps=95258.02 gbps=93.04 p99=773.00us errlines=0
+RES prismstar closed NB=1 c=50 gbps=30.48 (certified peak 2026-08-16, see fig11-README)

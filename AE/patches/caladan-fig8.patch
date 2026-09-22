@@ -1,0 +1,75 @@
+--- /homes/inho/Capybara/caladan/apps/synthetic/src/main.rs	2026-08-07 23:00:56.461630517 +0000
++++ /homes/inho/Capybara/caladan-fig8/apps/synthetic/src/main.rs	2026-08-08 16:32:34.475552151 +0000
+@@ -2198,7 +2198,6 @@
+                 } else {
+                     eprintln!("Failed to create file {}.latency", exptid);
+                 }
+-                return true;
+ 
+                 if let Ok(mut file) = File::create(format!("{}.latency_raw", exptid)) {
+                     for (index, latency) in latencies_raw.iter().enumerate() {
+--- /homes/inho/Capybara/caladan/apps/synthetic/src/resp.rs	2026-08-07 03:50:21.747227458 +0000
++++ /homes/inho/Capybara/caladan-fig8/apps/synthetic/src/resp.rs	2026-08-09 06:27:36.959005498 +0000
+@@ -191,6 +191,13 @@
+         tport: Transport,
+         addr: SocketAddrV4,
+     ) {
++        // fig9: allow skipping the 1M-key preload (REDIS_PRELOAD=0); with the
++        // parity-bound switch the VIP preload connection reaches only one
++        // backend anyway, so symmetric nil-GETs are preferable for the CDF.
++        if std::env::var("REDIS_PRELOAD").map(|v| v == "0").unwrap_or(false) {
++            eprintln!("preload skipped (REDIS_PRELOAD=0)");
++            return;
++        }
+         self.preload_server(backend, tport, addr);
+         for &addr in self.additional_servers.iter() {
+             self.preload_server(backend, tport, addr);
+@@ -226,7 +233,6 @@
+                                 }
+                                 std::str::from_utf8(&value).unwrap().to_string()
+                             };
+-                            eprintln!("*3\r\n$3\r\nSET\r\n${}\r\n{}\r\n${}\r\n{}\r\n", key.len(), key, value.len(), value);
+                             format!("*3\r\n$3\r\nSET\r\n${}\r\n{}\r\n${}\r\n{}\r\n", key.len(), key, value.len(), value)
+                         }
+                     )
+--- /homes/inho/Capybara/caladan/iokernel/dpdk.c	2026-08-07 03:50:21.819226784 +0000
++++ /homes/inho/Capybara/caladan-fig8/iokernel/dpdk.c	2026-08-10 09:12:29.666498190 +0000
+@@ -50,7 +50,7 @@
+ #define RX_RING_SIZE 256
+ #define TX_RING_SIZE 256
+ 
+-#define IOKERNEL_MTU 1500
++#define IOKERNEL_MTU 9216 /* fig10: jumbo end-to-end (paper configuration) */
+ 
+ #define MLX5_RX_RING_SIZE 2048
+ #define MLX5_TX_RING_SIZE 2048
+@@ -84,6 +84,7 @@
+  */
+ static inline int dpdk_port_init(uint8_t port, struct rte_mempool *mbuf_pool)
+ {
++	log_info("fig10: IOKERNEL_MTU=%d", IOKERNEL_MTU);
+ 	struct rte_eth_conf port_conf = port_conf_default;
+ 	const uint16_t rx_rings = 1, tx_rings = 1;
+ 	uint16_t nb_rxd = RX_RING_SIZE;
+--- /homes/inho/Capybara/caladan/iokernel/rx.c	2026-08-07 03:50:21.827226710 +0000
++++ /homes/inho/Capybara/caladan-fig8/iokernel/rx.c	2026-08-10 08:51:58.634010510 +0000
+@@ -285,7 +285,7 @@
+ {
+ 	/* create a mempool in shared memory to hold the rx mbufs */
+ 	dp.rx_mbuf_pool = rx_pktmbuf_pool_create_in_shm("RX_MBUF_POOL",
+-			IOKERNEL_NUM_MBUFS, MBUF_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
++			IOKERNEL_NUM_MBUFS, MBUF_CACHE_SIZE, 0, 9600, /* fig10: jumbo mbufs */
+ 			rte_socket_id());
+ 
+ 	if (dp.rx_mbuf_pool == NULL) {
+--- /homes/inho/Capybara/caladan/inc/iokernel/shm.h	2026-08-07 03:50:21.791227047 +0000
++++ /homes/inho/Capybara/caladan-fig8/inc/iokernel/shm.h	2026-08-10 08:51:58.618010660 +0000
+@@ -13,7 +13,7 @@
+ #include <base/stddef.h>
+ 
+ #define INGRESS_MBUF_SHM_KEY 0x696d736b /* "imsk" */
+-#define INGRESS_MBUF_SHM_SIZE 0x20000000
++#define INGRESS_MBUF_SHM_SIZE 0x80000000 /* fig10: 2GB for jumbo mbufs */
+ 
+ #define IOKERNEL_INFO_KEY 0x696e666f /* "info" */
+ #define IOKERNEL_INFO_SIZE PGSIZE_4KB

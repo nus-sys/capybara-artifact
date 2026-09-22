@@ -1,0 +1,12 @@
+# Plotting dependencies for the Capybara AE figures.
+#
+# On the tester account these are already vendored under pyenv-lib/ and added to
+# sys.path automatically — reviewers need install NOTHING. This file is for
+# regenerating figures on a different machine (e.g. from the shipped sample-data).
+#
+# Pinned to what the testbed uses (system numpy is 1.21, so pandas is held at the
+# last release compatible with it).
+pandas==1.5.3
+numpy>=1.21,<1.27
+matplotlib>=3.5
+brokenaxes>=0.6

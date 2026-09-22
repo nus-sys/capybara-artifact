@@ -1,0 +1,9 @@
+c5d84e06ebcaea6182e04672b968a372  bin/examples/rust/capy-proxy-fe.elf
+e07e8fcc0f6dbe2671d837c7f4cea61b  bin/examples/rust/capy-proxy-be.elf
+baa71e6f8e4cdac769b09d146065010e  bin/examples/rust/proxy-server-fe.elf
+bbca21084269735254b5f0dc436ca116  bin/examples/rust/proxy-server-be.elf
+9c9221c918f0b5d24c1d3bf9e33481e0  bin/examples/rust/capy-proxy-fe-debug.elf
+05ed5fcc6374da789474d78805c17afc  bin/examples/rust/capy-proxy-be-debug.elf
+45a3e846b9693fa79bd1f2c3144ab2d6  target/release/examples/dpdk-ctrl
+223159c5827c63d31341702a153365fc  /homes/inho/Capybara/prism-star/bin/examples/rust/prism-fe.elf
+50f9f96cdfa271a58d7f270b2fac2413  /homes/inho/Capybara/prism-star/bin/examples/rust/prism-be-http.elf

@@ -1,0 +1,15 @@
+RES fig12 demikernel conn=144 total_rps=2394533 procs=12
+RES fig12 demikernel conn=14400 total_rps=2333838 procs=12
+RES fig12 demikernel conn=193536 total_rps=1512539 procs=12
+RES fig12 demikernel-full conn=144 total_rps=2391790 procs=12
+RES fig12 demikernel-full conn=1440 total_rps=2395599 procs=12
+RES fig12 demikernel-full conn=2880 total_rps=2385621 procs=12
+RES fig12 demikernel-full conn=7200 total_rps=2367383 procs=12
+RES fig12 demikernel-full conn=14400 total_rps=2339858 procs=12
+RES fig12 demikernel-full conn=28800 total_rps=2294131 procs=12
+RES fig12 demikernel-full conn=43200 total_rps=2261211 procs=12
+RES fig12 demikernel-full conn=57600 total_rps=2226925 procs=12
+RES fig12 demikernel-full conn=72000 total_rps=2196630 procs=12
+RES fig12 demikernel-full conn=115200 total_rps=1997637 procs=12
+RES fig12 demikernel-full conn=158400 total_rps=1710989 procs=12
+RES fig12 demikernel-full conn=193536 total_rps=1504064 procs=12

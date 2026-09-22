@@ -1,0 +1,4 @@
+base: 7cd615adf039b8a564912a137d89525ccbe3c3ea
+d9e783dc7f2ff9dea6500ce8a92a7de4  bin/examples/rust/capy-proxy-fe.elf
+b66f3bbe85a754b209126593e01c0ab1  bin/examples/rust/capy-proxy-be.elf
+45a3e846b9693fa79bd1f2c3144ab2d6  target/release/examples/dpdk-ctrl

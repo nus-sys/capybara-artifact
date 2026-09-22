@@ -1,0 +1,39 @@
+diff --git a/apps/synthetic/src/main.rs b/apps/synthetic/src/main.rs
+index 686ee49..3201fa3 100644
+--- a/apps/synthetic/src/main.rs
++++ b/apps/synthetic/src/main.rs
+@@ -1340,6 +1340,9 @@ fn run_shortflow_client(
+                     conn_done_flag.store(true, Ordering::Relaxed);
+                     // Wait for watchdog (should exit quickly now)
+                     let _ = watchdog.join();
++                    // Abort (RST) instead of graceful close: avoids FIN/TIME_WAIT port-reuse
++                    // stalls on rapid same-port reconnects
++                    conn.abort();
+                     // Connection closes here when conn goes out of scope
+                 }
+             }
+diff --git a/deps/pcm b/deps/pcm
+--- a/deps/pcm
++++ b/deps/pcm
+@@ -1 +1 @@
+-Subproject commit e54cac6c97e93516f9ce6a897670c51934af709e
++Subproject commit e54cac6c97e93516f9ce6a897670c51934af709e-dirty
+diff --git a/dpdk b/dpdk
+--- a/dpdk
++++ b/dpdk
+@@ -1 +1 @@
+-Subproject commit 80c5b4d6355d1dbece8dd1f812d374f3e24086bc
++Subproject commit 80c5b4d6355d1dbece8dd1f812d374f3e24086bc-dirty
+diff --git a/rdma-core b/rdma-core
+index 53ee89b..d676ccf 160000
+--- a/rdma-core
++++ b/rdma-core
+@@ -1 +1 @@
+-Subproject commit 53ee89b4abb1463e7ae713103f552b2bef1307ce
++Subproject commit d676ccf99376bfe35bd6e74d1a5cd3af87c6503b
+diff --git a/spdk b/spdk
+--- a/spdk
++++ b/spdk
+@@ -1 +1 @@
+-Subproject commit 797ff94b2351458ced0e15f440198cacd510b2fe
++Subproject commit 797ff94b2351458ced0e15f440198cacd510b2fe-dirty

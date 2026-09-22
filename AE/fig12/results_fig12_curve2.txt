@@ -1,0 +1,12 @@
+RES fig12 curve2 conn=144 mign=20000000 total_rps=2394307 procs=12
+RES fig12 curve2 conn=1440 mign=20000000 total_rps=2395892 procs=12
+RES fig12 curve2 conn=2880 mign=20000000 total_rps=2382699 procs=12
+RES fig12 curve2 conn=7200 mign=20000000 total_rps=2366101 procs=12
+RES fig12 curve2 conn=14400 mign=20000000 total_rps=2337870 procs=12
+RES fig12 curve2 conn=28800 mign=20000000 total_rps=2296049 procs=12
+RES fig12 curve2 conn=43200 mign=20000000 total_rps=2263083 procs=12
+RES fig12 curve2 conn=57600 mign=20000000 total_rps=2227064 procs=12
+RES fig12 curve2 conn=72000 mign=20000000 total_rps=2196859 procs=12
+RES fig12 curve2 conn=115200 mign=20000000 total_rps=1961022 procs=12
+RES fig12 curve2 conn=158400 mign=20000000 total_rps=1671043 procs=12
+RES fig12 curve2 conn=193536 mign=20000000 total_rps=1463825 procs=12

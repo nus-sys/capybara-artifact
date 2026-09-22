@@ -1,0 +1,107 @@
+# tree: /homes/inho/Capybara/capybara-fig14tls   HEAD: 4599b186f136f77cbaa0829ecfe96c58ef3ecce6
+diff --git a/examples/rust/http-server.rs b/examples/rust/http-server.rs
+index e75e21a8..bb4459ee 100644
+--- a/examples/rust/http-server.rs
++++ b/examples/rust/http-server.rs
+@@ -432,14 +432,14 @@ fn server(local: SocketAddrV4) -> Result<()> {
+                     
+                     // Pop from new_qd
+                     /* COMMENT OUT THIS FOR APP_STATE_SIZE VS MIG_LAT EVAL */
+-                    match libos.pop(new_qd) {
+-                        Ok(pop_qt) => {
+-                            qts.push(pop_qt)
+-                        },
+-                        Err(e) => panic!("pop qt: {}", e),
+-                    }
+-                    #[cfg(feature = "manual-tcp-migration")]
+-                    assert!(requests_remaining.insert(new_qd, migration_per_n).is_none());
++                    // match libos.pop(new_qd) {
++                        // Ok(pop_qt) => {
++                            // qts.push(pop_qt)
++                        // },
++                        // Err(e) => panic!("pop qt: {}", e),
++                    // }
++                    // #[cfg(feature = "manual-tcp-migration")]
++                    // assert!(requests_remaining.insert(new_qd, migration_per_n).is_none());
+                     /* COMMENT OUT THIS FOR APP_STATE_SIZE VS MIG_LAT EVAL */
+ 
+                     connstate.insert(new_qd, state);
+@@ -448,11 +448,11 @@ fn server(local: SocketAddrV4) -> Result<()> {
+                     qts.push(libos.accept(qd).expect("accept qtoken"));
+ 
+                     /* ACTIVATE THIS FOR APP_STATE_SIZE VS MIG_LAT EVAL */
+-                    // static mut NUM_MIG: u32 = 0;
+-                    // unsafe{ NUM_MIG += 1; }
+-                    // if unsafe{ NUM_MIG } < 11000 {
+-                    //     libos.initiate_migration(new_qd).unwrap();
+-                    // }
++                    static mut NUM_MIG: u32 = 0;
++                    unsafe{ NUM_MIG += 1; }
++                    if unsafe{ NUM_MIG } < 11000 {
++                        libos.initiate_migration(new_qd).unwrap();
++                    }
+                     /* ACTIVATE THIS FOR APP_STATE_SIZE VS MIG_LAT EVAL */
+                 },
+ 
+diff --git a/examples/rust/linux.mk b/examples/rust/linux.mk
+index c1c0c108..b7906177 100644
+--- a/examples/rust/linux.mk
++++ b/examples/rust/linux.mk
+@@ -24,7 +24,7 @@ all: all-examples
+ #	cp -f $(BUILD_DIR)/examples/tcpmig-server-single $(BINDIR)/examples/rust/tcpmig-server-single.$(EXEC_SUFFIX)
+ #	cp -f $(BUILD_DIR)/examples/dpdk-ctrl $(BINDIR)/examples/rust/dpdk-ctrl.$(EXEC_SUFFIX)
+ 	cp -f $(BUILD_DIR)/examples/http-server $(BINDIR)/examples/rust/http-server.$(EXEC_SUFFIX)
+-#	cp -f $(BUILD_DIR)/examples/https $(BINDIR)/examples/rust/https.$(EXEC_SUFFIX)
++	cp -f $(BUILD_DIR)/examples/https $(BINDIR)/examples/rust/https.$(EXEC_SUFFIX)
+ #	cp -f $(BUILD_DIR)/examples/capybara-switch $(BINDIR)/examples/rust/capybara-switch.$(EXEC_SUFFIX)
+ #	cp -f $(BUILD_DIR)/examples/proxy-server-fe $(BINDIR)/examples/rust/proxy-server-fe.$(EXEC_SUFFIX)
+ #	cp -f $(BUILD_DIR)/examples/proxy-server-be $(BINDIR)/examples/rust/proxy-server-be.$(EXEC_SUFFIX)
+@@ -50,8 +50,8 @@ all-examples:
+ #	$(CARGO) build --example dpdk-ctrl $(CARGO_FEATURES) $(CARGO_FLAGS)
+ 	@echo "$(CARGO) build --example http-server $(CARGO_FEATURES) $(CARGO_FLAGS)"
+ 	$(CARGO) build --example http-server $(CARGO_FEATURES) $(CARGO_FLAGS) $(EXAMPLE_FEATURES)
+-#	@echo "$(CARGO) build --example https $(CARGO_FEATURES) $(CARGO_FLAGS)"
+-#	$(CARGO) build --example https $(CARGO_FEATURES) $(CARGO_FLAGS) $(EXAMPLE_FEATURES)
++	@echo "$(CARGO) build --example https $(CARGO_FEATURES) $(CARGO_FLAGS)"
++	$(CARGO) build --example https $(CARGO_FEATURES) $(CARGO_FLAGS) $(EXAMPLE_FEATURES)
+ #	$(CARGO) build --example capybara-switch $(CARGO_FEATURES) $(CARGO_FLAGS) --features=capybara-switch
+ #,capy-profile
+ #	$(CARGO) build --example proxy-server-fe $(CARGO_FEATURES) $(CARGO_FLAGS) $(EXAMPLE_FEATURES)
+diff --git a/rust-toolchain b/rust-toolchain
+index 7a5fe266..099852ef 100644
+--- a/rust-toolchain
++++ b/rust-toolchain
+@@ -1 +1 @@
+-nightly-2024-05-02
+\ No newline at end of file
++nightly-2024-09-25
+diff --git a/src/rust/inetstack/protocols/tcpmig/peer.rs b/src/rust/inetstack/protocols/tcpmig/peer.rs
+index 88657cd0..dd0579c6 100644
+--- a/src/rust/inetstack/protocols/tcpmig/peer.rs
++++ b/src/rust/inetstack/protocols/tcpmig/peer.rs
+@@ -387,7 +387,12 @@ impl TcpMigPeer {
+         ); // Inho: Q. Why link_addr (MAC addr) is needed when the libOS has arp_table already? Is it possible to use the arp_table instead?
+ 
+         let active = match self.active_migrations.entry(remote) {
+-            Entry::Occupied(..) => panic!("duplicate initiate migration"),
++            Entry::Occupied(..) => {
++                // A second accept can race the first migration of the same
++                // connection; the later stack downgrades this to a no-op.
++                eprintln!("duplicate initiate migration");
++                return;
++            },
+             Entry::Vacant(entry) => entry.insert(active),
+         };
+ 
+diff --git a/src/rust/lib.rs b/src/rust/lib.rs
+index 17a601fe..c7344fc0 100644
+--- a/src/rust/lib.rs
++++ b/src/rust/lib.rs
+@@ -3,6 +3,7 @@
+ 
+ #![cfg_attr(feature = "strict", deny(clippy:all))]
+ #![recursion_limit = "512"]
++#![feature(new_zeroed_alloc)]
+ #![feature(maybe_uninit_uninit_array)]
+ #![feature(new_uninit)]
+ #![feature(try_blocks)]

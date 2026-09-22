@@ -1,0 +1,105 @@
+# tree: /homes/inho/Capybara/capybara   HEAD: 1cb01046596c5192fe4a00d508159fa0e366eafa
+diff --git a/eval/latency_cdf.sh b/eval/latency_cdf.sh
+index cb6541e7..9e99002d 100644
+--- a/eval/latency_cdf.sh
++++ b/eval/latency_cdf.sh
+@@ -5,7 +5,7 @@ if [ $# -ne 1 ];then
+ 	exit 1
+ fi
+ 
+-exptid=/homes/inho/capybara-data/$1
++exptid=${CAPYBARA_DATA:-$HOME/capybara-data}/$1
+ 
+ cat $exptid.latency_trace | awk -F',' '{print $3}' | sort -n | uniq --count | awk '
+ BEGIN {
+diff --git a/eval/mig_delay_cdf_avg_minmax_stddev.sh b/eval/mig_delay_cdf_avg_minmax_stddev.sh
+index d2a028d1..c6624126 100644
+--- a/eval/mig_delay_cdf_avg_minmax_stddev.sh
++++ b/eval/mig_delay_cdf_avg_minmax_stddev.sh
+@@ -5,7 +5,7 @@ if [ $# -ne 1 ];then
+ 	exit 1
+ fi
+ 
+-exptid=/homes/inho/capybara-data/$1
++exptid=${CAPYBARA_DATA:-$HOME/capybara-data}/$1
+ 
+ input_file=$exptid.mig_delay
+ num_columns=$(head -1 $input_file | awk -F, '{print NF}')
+diff --git a/eval/ms_avg_99p_lat.sh b/eval/ms_avg_99p_lat.sh
+index 2ee23a1e..32284178 100644
+--- a/eval/ms_avg_99p_lat.sh
++++ b/eval/ms_avg_99p_lat.sh
+@@ -5,7 +5,7 @@ if [ $# -ne 1 ];then
+ 	exit 1
+ fi
+ 
+-exptid=/homes/inho/capybara-data/$1
++exptid=${CAPYBARA_DATA:-$HOME/capybara-data}/$1
+ 
+ cat $exptid.latency_trace | awk -F, '                              
+ {
+diff --git a/eval/ms_total_even_odd_numreq.sh b/eval/ms_total_even_odd_numreq.sh
+index a23d5adb..eb3bbc36 100644
+--- a/eval/ms_total_even_odd_numreq.sh
++++ b/eval/ms_total_even_odd_numreq.sh
+@@ -5,7 +5,7 @@ if [ $# -ne 1 ];then
+ 	exit 1
+ fi
+ 
+-exptid=/homes/inho/capybara-data/$1
++exptid=${CAPYBARA_DATA:-$HOME/capybara-data}/$1
+ 
+ cat $exptid.latency_trace | awk -F, '                                              
+ {
+diff --git a/eval/parse_mig_cpu_ovhd.sh b/eval/parse_mig_cpu_ovhd.sh
+index f73c6be0..1827ed60 100644
+--- a/eval/parse_mig_cpu_ovhd.sh
++++ b/eval/parse_mig_cpu_ovhd.sh
+@@ -5,7 +5,7 @@ if [ $# -ne 1 ];then
+ 	exit 1
+ fi
+ 
+-exptid=/homes/inho/capybara-data/$1
++exptid=${CAPYBARA_DATA:-$HOME/capybara-data}/$1
+ 
+ cat $exptid.be0 | grep PROF | tail -200000 | awk -F, 'NR%2{val=$2; next} {sum=val+$2; print val "," $2 "," sum}' | awk -v exptid="$exptid" -F, '
+ {
+diff --git a/eval/parse_request_sched.sh b/eval/parse_request_sched.sh
+index 3764a886..f8a9df1f 100644
+--- a/eval/parse_request_sched.sh
++++ b/eval/parse_request_sched.sh
+@@ -5,7 +5,7 @@ if [ $# -ne 1 ];then
+ 	exit 1
+ fi
+ 
+-exptid=/homes/inho/capybara-data/$1
++exptid=${CAPYBARA_DATA:-$HOME/capybara-data}/$1
+ 
+ cat $exptid.request_sched | sort -t, -k1,1n |  awk -F, '
+ BEGIN { first_val = 0; }
+diff --git a/eval/parse_server_reply.sh b/eval/parse_server_reply.sh
+index f1a53a1b..ceec9f63 100644
+--- a/eval/parse_server_reply.sh
++++ b/eval/parse_server_reply.sh
+@@ -5,7 +5,7 @@ if [ $# -ne 1 ];then
+ 	exit 1
+ fi
+ 
+-exptid=/homes/inho/capybara-data/$1
++exptid=${CAPYBARA_DATA:-$HOME/capybara-data}/$1
+ 
+ cat $exptid.server_reply | sort -t, -k2,2n | awk -v exptid="$exptid" -F, '                              
+ {
+diff --git a/eval/workload_gap_cdf.sh b/eval/workload_gap_cdf.sh
+index 3d962024..69327cff 100644
+--- a/eval/workload_gap_cdf.sh
++++ b/eval/workload_gap_cdf.sh
+@@ -5,7 +5,7 @@ if [ $# -ne 1 ];then
+ 	exit 1
+ fi
+ 
+-exptid=/homes/inho/capybara-data/$1
++exptid=${CAPYBARA_DATA:-$HOME/capybara-data}/$1
+ 
+ paste -d, $exptid.be0_rps_signal $exptid.be1_rps_signal | awk -F, '{print ($3 - $6) < 0 ? -($3 - $6) : ($3 - $6)}' | sort -n | uniq --count | awk '
+ BEGIN {

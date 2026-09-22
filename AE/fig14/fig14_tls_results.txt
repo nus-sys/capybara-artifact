@@ -1,0 +1,7 @@
+no time-log events in /homes/sigcomm26ae/capybara-data/miglattls0-sweep.be*
+miglattls16384-sweep: 2000 migrations
+  origin CPU   1.58 us   target CPU   2.37 us   network  15.73 us
+  server CPU   3.95 us   total  19.68 us   blackout  13.53 us
+no time-log events in /homes/sigcomm26ae/capybara-data/miglattls32768-sweep.be*
+no time-log events in /homes/sigcomm26ae/capybara-data/miglattls65536-sweep.be*
+no time-log events in /homes/sigcomm26ae/capybara-data/miglattls131072-sweep.be*

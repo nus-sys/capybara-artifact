@@ -1,0 +1,12 @@
+BRANCH=capybara-client
+HEAD=99d2060d02860daf0d32848cb8e0d658c3685789
+ M apps/synthetic/src/main.rs
+ m deps/pcm
+ m dpdk
+ M rdma-core
+ m spdk
+?? apps/loadgen/
+?? client_node7_qs.config
+?? client_node7_shortflow.config
+?? ksched/.Module.symvers.cmd
+?? ksched/.fake_idle.ko.cmd

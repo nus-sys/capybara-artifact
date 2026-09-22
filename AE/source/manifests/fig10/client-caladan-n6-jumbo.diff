@@ -1,0 +1,72 @@
+diff --git a/deps/pcm b/deps/pcm
+--- a/deps/pcm
++++ b/deps/pcm
+@@ -1 +1 @@
+-Subproject commit e54cac6c97e93516f9ce6a897670c51934af709e
++Subproject commit e54cac6c97e93516f9ce6a897670c51934af709e-dirty
+diff --git a/dpdk b/dpdk
+--- a/dpdk
++++ b/dpdk
+@@ -1 +1 @@
+-Subproject commit 80c5b4d6355d1dbece8dd1f812d374f3e24086bc
++Subproject commit 80c5b4d6355d1dbece8dd1f812d374f3e24086bc-dirty
+diff --git a/inc/iokernel/shm.h b/inc/iokernel/shm.h
+index 05d2aa5..e181a9a 100644
+--- a/inc/iokernel/shm.h
++++ b/inc/iokernel/shm.h
+@@ -13,7 +13,7 @@
+ #include <base/stddef.h>
+ 
+ #define INGRESS_MBUF_SHM_KEY 0x696d736b /* "imsk" */
+-#define INGRESS_MBUF_SHM_SIZE 0x20000000
++#define INGRESS_MBUF_SHM_SIZE 0x80000000 /* fig10: 2GB for jumbo mbufs */
+ 
+ #define IOKERNEL_INFO_KEY 0x696e666f /* "info" */
+ #define IOKERNEL_INFO_SIZE PGSIZE_4KB
+diff --git a/iokernel/dpdk.c b/iokernel/dpdk.c
+index f9a3467..497bb5d 100644
+--- a/iokernel/dpdk.c
++++ b/iokernel/dpdk.c
+@@ -50,7 +50,7 @@
+ #define RX_RING_SIZE 256
+ #define TX_RING_SIZE 256
+ 
+-#define IOKERNEL_MTU 1500
++#define IOKERNEL_MTU 9216 /* fig10 jumbo */
+ 
+ #define MLX5_RX_RING_SIZE 2048
+ #define MLX5_TX_RING_SIZE 2048
+@@ -84,6 +84,7 @@ static const struct rte_eth_conf port_conf_default = {
+  */
+ static inline int dpdk_port_init(uint8_t port, struct rte_mempool *mbuf_pool)
+ {
++	log_info("fig10: IOKERNEL_MTU=%d", IOKERNEL_MTU);
+ 	struct rte_eth_conf port_conf = port_conf_default;
+ 	const uint16_t rx_rings = 1, tx_rings = 1;
+ 	uint16_t nb_rxd = RX_RING_SIZE;
+diff --git a/iokernel/rx.c b/iokernel/rx.c
+index f6b13c1..e4d2343 100644
+--- a/iokernel/rx.c
++++ b/iokernel/rx.c
+@@ -285,7 +285,7 @@ int rx_init()
+ {
+ 	/* create a mempool in shared memory to hold the rx mbufs */
+ 	dp.rx_mbuf_pool = rx_pktmbuf_pool_create_in_shm("RX_MBUF_POOL",
+-			IOKERNEL_NUM_MBUFS, MBUF_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
++			IOKERNEL_NUM_MBUFS, MBUF_CACHE_SIZE, 0, 9600, /* fig10 jumbo */
+ 			rte_socket_id());
+ 
+ 	if (dp.rx_mbuf_pool == NULL) {
+diff --git a/rdma-core b/rdma-core
+index 53ee89b..33b576e 160000
+--- a/rdma-core
++++ b/rdma-core
+@@ -1 +1 @@
+-Subproject commit 53ee89b4abb1463e7ae713103f552b2bef1307ce
++Subproject commit 33b576e65340c57933cf5b6f34e6ecbd733f097c
+diff --git a/spdk b/spdk
+--- a/spdk
++++ b/spdk
+@@ -1 +1 @@
+-Subproject commit 797ff94b2351458ced0e15f440198cacd510b2fe
++Subproject commit 797ff94b2351458ced0e15f440198cacd510b2fe-dirty

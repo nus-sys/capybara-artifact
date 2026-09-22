@@ -1,0 +1,7 @@
+RES proxy closed NB=1 c=5 SANITY-FAIL
+RES proxy closed NB=1 c=10 rps=18851.37 gbps=18.4 p99=506.00us errlines=1
+RES proxy closed NB=1 c=15 rps=18272.98 gbps=17.84 p99=0.87ms errlines=1
+RES proxy closed NB=2 c=10 rps=18766.60 gbps=18.32 p99=765.00us errlines=1
+RES proxy closed NB=2 c=15 rps=18617.38 gbps=18.16 p99=1.33ms errlines=1
+RES proxy closed NB=4 c=10 rps=18443.97 gbps=18.0 p99=607.00us errlines=1
+RES proxy closed NB=4 c=15 SANITY-FAIL

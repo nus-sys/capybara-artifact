@@ -1,0 +1,29 @@
+# tree: /homes/inho/Capybara/capybara-redis   HEAD: e12fe87d2eb1fddf5f4e7195114a3d46d13f351e
+diff --git a/config/node8.conf b/config/node8.conf
+index 0f4e0ba2a..81dafff04 100755
+--- a/config/node8.conf
++++ b/config/node8.conf
+@@ -191,8 +191,8 @@ tcp-keepalive 300
+ # directive can be used to define TLS-listening ports. To enable TLS on the
+ # default port, use:
+ #
+-# port 0
+-tls-port 10000
++port 10000
++# tls-port 10000
+ 
+ # Configure a X.509 certificate and private key to use for authenticating the
+ # server to connected clients, masters or cluster peers.  These files should be
+diff --git a/redis0.conf b/redis0.conf
+index 510d3bc75..b594fc815 100644
+--- a/redis0.conf
++++ b/redis0.conf
+@@ -84,7 +84,7 @@
+ # You will also need to set a password unless you explicitly disable protected
+ # mode.
+ # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-bind 10.0.1.9
++bind 10.0.1.8
+ 
+ # By default, outgoing connections (from replica to master, from Sentinel to
+ # instances, cluster bus, etc.) are not bound to a specific local address. In

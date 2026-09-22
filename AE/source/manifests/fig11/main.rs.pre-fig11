@@ -1,0 +1,3251 @@
+#![feature(test)]
+#[macro_use]
+extern crate clap;
+
+extern crate byteorder;
+extern crate dns_parser;
+extern crate itertools;
+extern crate libc;
+extern crate net2;
+extern crate rand;
+extern crate rand_distr;
+extern crate rand_mt;
+extern crate shenango;
+extern crate test;
+
+extern crate arrayvec;
+
+use arrayvec::ArrayVec;
+use libc::exit;
+use rand_distr::num_traits::ToPrimitive;
+
+use std::collections::{BTreeMap, HashMap};
+use std::f32::INFINITY;
+use std::{io, result};
+use std::io::{Error, ErrorKind, Read, Write};
+use std::net::{Ipv4Addr, SocketAddrV4};
+use std::slice;
+use std::str::FromStr;
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+
+use clap::{App, Arg};
+use itertools::{Itertools, Either};
+use rand_distr::{Normal};
+use rand::{Rng, SeedableRng, rngs::StdRng};
+use rand::seq::SliceRandom;
+use rand_mt::Mt64;
+use shenango::udp::UdpSpawner;
+
+mod backend;
+use backend::*;
+
+mod lockstep;
+
+mod payload;
+use payload::{Payload, SyntheticProtocol, PAYLOAD_SIZE};
+
+#[derive(Default)]
+pub struct Packet {
+    work_iterations: u64,
+    randomness: u64,
+    target_start: Duration,
+    client_port: u16,
+    actual_start: Option<Duration>,
+    completion_time_ns: AtomicU64,
+    completion_server_tsc: Option<u64>,
+    completion_time: Option<Duration>,
+    server_metadata: Option<ServerMetadata>,
+}
+
+mod fakework;
+use fakework::FakeWorker;
+
+mod memcached;
+use memcached::MemcachedProtocol;
+
+mod dns;
+use dns::DnsProtocol;
+
+mod reflex;
+use reflex::ReflexProtocol;
+
+mod http;
+use http::HttpProtocol;
+
+mod resp;
+use resp::RespProtocol;
+
+use std::fs::{File, OpenOptions};
+
+static mut EXPTID: Option<String> = None;
+static mut ONOFF: Option<String> = None;
+
+
+mod distribution;
+use distribution::Distribution;
+
+static mut LATENCY_TRACE_RESULTS: Vec<(u64, u64)> = Vec::new(); // actual_start, latency
+
+
+arg_enum! {
+#[derive(Copy, Clone)]
+pub enum Transport {
+    Udp,
+    Tcp,
+}}
+
+pub struct Buffer<'a> {
+    buf: &'a mut [u8],
+    head: usize,
+    tail: usize,
+}
+
+impl<'a> Buffer<'a> {
+    pub fn new(inbuf: &mut [u8]) -> Buffer {
+        Buffer {
+            buf: inbuf,
+            head: 0,
+            tail: 0,
+        }
+    }
+
+    pub fn data_size(&self) -> usize {
+        self.head - self.tail
+    }
+
+    pub fn get_data(&self) -> &[u8] {
+        &self.buf[self.tail..self.head]
+    }
+
+    pub fn push_data(&mut self, size: usize) {
+        self.head += size;
+        assert!(self.head <= self.buf.len());
+    }
+
+    pub fn pull_data(&mut self, size: usize) {
+        assert!(size <= self.data_size());
+        self.tail += size;
+    }
+
+    pub fn get_free_space(&self) -> usize {
+        self.buf.len() - self.head
+    }
+
+    pub fn get_empty_buf(&mut self) -> &mut [u8] {
+        &mut self.buf[self.head..]
+    }
+
+    pub fn try_shrink(&mut self) -> io::Result<()> {
+        if self.data_size() == 0 {
+            self.head = 0;
+            self.tail = 0;
+            return Ok(());
+        }
+
+        if self.head < self.buf.len() {
+            return Ok(());
+        }
+
+        if self.data_size() == self.buf.len() {
+            eprintln!("Need larger buffers");
+            return Err(Error::new(ErrorKind::Other, "Need larger buffers"));
+        }
+
+        self.buf.as_mut().copy_within(self.tail..self.head, 0);
+        self.head = self.data_size();
+        self.tail = 0;
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct ServerMetadata {
+    timestamp: u64,
+    server_port: u16,
+    queue_len: u32,
+    conn_count: u16,
+    response_time_delta: u32,
+}
+
+trait LoadgenProtocol: Send + Sync {
+    fn gen_req(&self, i: usize, p: &Packet, buf: &mut Vec<u8>);
+    fn uses_ordered_requests(&self) -> bool;
+    fn read_response(&self, sock: &Connection, scratch: &mut Buffer) -> io::Result<(usize, u64)>;
+
+    fn as_http(&self) -> Option<&HttpProtocol> { None }
+}
+
+arg_enum! {
+#[derive(Copy, Clone)]
+enum OutputMode {
+    Silent,
+    Normal,
+    Buckets,
+    Trace,
+    Live
+}}
+
+fn duration_to_ns(duration: Duration) -> u64 {
+    duration.as_secs() * 1000_000_000 + duration.subsec_nanos() as u64
+}
+
+fn run_linux_udp_server(
+    backend: Backend,
+    addr: SocketAddrV4,
+    nthreads: usize,
+    worker: Arc<FakeWorker>,
+) {
+    let join_handles: Vec<_> = (0..nthreads)
+        .map(|_| {
+            let worker = worker.clone();
+            backend.spawn_thread(move || {
+                let socket = backend.create_udp_connection(addr, None).unwrap();
+                println!("Bound to address {}", socket.local_addr());
+                let mut buf = vec![0; 1024 * 128];
+                loop {
+                    let (len, remote_addr) = socket.recv_from(&mut buf[..]).unwrap();
+                    let payload = Payload::deserialize(&mut &buf[..len]).unwrap();
+                    worker.work(payload.work_iterations, payload.randomness);
+                    socket.send_to(&buf[..len], remote_addr).unwrap();
+                }
+            })
+        })
+        .collect();
+
+    for j in join_handles {
+        j.join().unwrap();
+    }
+}
+
+fn socket_worker(socket: &mut Connection, worker: Arc<FakeWorker>) {
+    let mut v = vec![0; PAYLOAD_SIZE];
+    let mut r = || {
+        socket.read_exact(&mut v[..PAYLOAD_SIZE])?;
+        let mut payload = Payload::deserialize(&mut &v[..PAYLOAD_SIZE])?;
+        v.clear();
+        worker.work(payload.work_iterations, payload.randomness);
+        payload.randomness = shenango::rdtsc();
+        payload.serialize_into(&mut v)?;
+        Ok(socket.write_all(&v[..])?)
+    };
+    loop {
+        if let Err(e) = r() as io::Result<()> {
+            match e.raw_os_error() {
+                Some(-104) | Some(104) => break,
+                _ => {}
+            }
+            if e.kind() != ErrorKind::UnexpectedEof {
+                println!("Receive thread: {}", e);
+            }
+            break;
+        }
+    }
+}
+
+fn run_tcp_server(backend: Backend, addr: SocketAddrV4, worker: Arc<FakeWorker>) {
+    let tcpq = backend.create_tcp_listener(addr).unwrap();
+    println!("Bound to address {}", addr);
+    loop {
+        match tcpq.accept() {
+            Ok(mut c) => {
+                let worker = worker.clone();
+                backend.spawn_thread(move || socket_worker(&mut c, worker));
+            }
+            Err(e) => {
+                println!("Listener: {}", e);
+            }
+        }
+    }
+}
+
+fn run_spawner_server(addr: SocketAddrV4, workerspec: &str) {
+    static mut SPAWNER_WORKER: Option<FakeWorker> = None;
+    unsafe {
+        SPAWNER_WORKER = Some(FakeWorker::create(workerspec).unwrap());
+    }
+    extern "C" fn echo(d: *mut shenango::ffi::udp_spawn_data) {
+        unsafe {
+            let buf = slice::from_raw_parts((*d).buf as *mut u8, (*d).len as usize);
+            let mut payload = Payload::deserialize(&mut &buf[..]).unwrap();
+            let worker = SPAWNER_WORKER.as_ref().unwrap();
+            worker.work(payload.work_iterations, payload.randomness);
+            payload.randomness = shenango::rdtsc();
+            let mut array = ArrayVec::<_, PAYLOAD_SIZE>::new();
+            payload.serialize_into(&mut array).unwrap();
+            let _ = UdpSpawner::reply(d, array.as_slice());
+            UdpSpawner::release_data(d);
+        }
+    }
+
+    let _s = unsafe { UdpSpawner::new(addr, echo).unwrap() };
+
+    let wg = shenango::WaitGroup::new();
+    wg.add(1);
+    wg.wait();
+}
+
+fn run_memcached_preload(
+    proto: MemcachedProtocol,
+    backend: Backend,
+    tport: Transport,
+    addr: SocketAddrV4,
+    nthreads: usize,
+) -> bool {
+    let perthread = (proto.nvalues as usize + nthreads - 1) / nthreads;
+    let join_handles: Vec<JoinHandle<_>> = (0..nthreads)
+        .map(|i| {
+            let proto = proto.clone();
+            backend.spawn_thread(move || {
+                let sock1 = Arc::new(match tport {
+                    Transport::Tcp => backend.create_tcp_connection(None, addr).unwrap(),
+                    Transport::Udp => backend
+                        .create_udp_connection("0.0.0.0:0".parse().unwrap(), Some(addr))
+                        .unwrap(),
+                });
+                let socket = sock1.clone();
+                backend.spawn_thread(move || {
+                    backend.sleep(Duration::from_secs(520));
+                    if Arc::strong_count(&socket) > 1 {
+                        println!("Timing out socket");
+                        socket.shutdown();
+                    }
+                });
+
+                let mut vec_s: Vec<u8> = Vec::with_capacity(4096);
+                let mut vec_r: Vec<u8> = vec![0; 4096];
+                let mut buf = Buffer::new(&mut vec_r[..]);
+                for n in 0..perthread {
+                    vec_s.clear();
+                    proto.set_request((i * perthread + n) as u64, 0, &mut vec_s);
+
+                    if let Err(e) = (&*sock1).write_all(&vec_s[..]) {
+                        println!("Preload send ({}/{}): {}", n, perthread, e);
+                        return false;
+                    }
+
+                    if let Err(e) = proto.read_response(&sock1, &mut buf) {
+                        println!("preload receive ({}/{}): {}", n, perthread, e);
+                        return false;
+                    }
+                }
+                true
+            })
+        })
+        .collect();
+
+    return join_handles.into_iter().all(|j| j.join().unwrap());
+}
+
+#[derive(Copy, Clone)]
+struct RequestSchedule {
+    arrival: Distribution,
+    service: Distribution,
+    output: OutputMode,
+    runtime: Duration,
+    rps: usize,
+    discard_pct: f32,
+}
+
+#[derive(Clone)]
+struct TraceResult {
+    actual_start: Option<Duration>,
+    target_start: Duration,
+    completion_time: Option<Duration>,
+    server_tsc: u64,
+    client_port: u16,
+    server_metadata: Option<ServerMetadata>,
+}
+
+impl PartialOrd for TraceResult {
+    fn partial_cmp(&self, other: &TraceResult) -> Option<std::cmp::Ordering> {
+        self.server_tsc.partial_cmp(&other.server_tsc)
+    }
+}
+
+impl PartialEq for TraceResult {
+    fn eq(&self, other: &TraceResult) -> bool {
+        self.server_tsc == other.server_tsc
+    }
+}
+
+#[derive(Clone, Default, PartialEq)]
+struct ScheduleResult {
+    packet_count: usize,
+    drop_count: usize,
+    never_sent_count: usize,
+    first_send: Option<Duration>,
+    last_send: Option<Duration>,
+    last_recv: Option<Duration>,
+    latencies: BTreeMap<u64, usize>,
+    latencies_raw: Vec<u64>,
+    first_tsc: Option<u64>,
+    trace: Option<Vec<TraceResult>>,
+}
+
+fn gen_classic_packet_schedule(
+    runtime: Duration,
+    packets_per_second: usize,
+    output: OutputMode,
+    distribution: Distribution,
+    ramp_up_seconds: usize,
+    nthreads: usize,
+    discard_pct: f32,
+) -> Vec<RequestSchedule> {
+    let mut sched: Vec<RequestSchedule> = Vec::new();
+
+    /* Ramp up in 100ms increments */
+    for t in 1..(10 * ramp_up_seconds) {
+        let rate = t * packets_per_second / (ramp_up_seconds * 10);
+
+        if rate == 0 {
+            continue;
+        }
+
+        // println!("{} pps : {} ns", rate, nthreads * 1000_000_000 / rate);
+
+        sched.push(RequestSchedule {
+            // arrival: Distribution::Constant((nthreads * 1000_000_000 / rate) as u64),
+            arrival: Distribution::Exponential((nthreads * 1000_000_000 / rate) as f64),
+            service: distribution,
+            output: OutputMode::Silent,
+            runtime: Duration::from_millis(100),
+            rps: rate,
+            discard_pct: 0.0,
+        });
+    }
+
+    let ns_per_packet = nthreads * 1000_000_000 / packets_per_second;
+
+    // println!("{} pps : {} ns", packets_per_second, ns_per_packet);
+
+    sched.push(RequestSchedule {
+        // arrival: Distribution::Constant(ns_per_packet as u64),
+        arrival: Distribution::Exponential(ns_per_packet as f64),
+        service: distribution,
+        output: output,
+        runtime: runtime,
+        rps: packets_per_second,
+        discard_pct: discard_pct,
+    });
+
+    sched
+}
+
+fn gen_loadshift_experiment(
+    spec: &str,
+    service: Distribution,
+    nthreads: usize,
+    output: OutputMode,
+) -> Vec<RequestSchedule> {
+    spec.split(",")
+        .map(|step_spec| {
+            let s: Vec<&str> = step_spec.split(":").collect();
+            assert!(s.len() >= 2 && s.len() <= 3);
+            let packets_per_second: u64 = s[0].parse().unwrap();
+            let ns_per_packet = nthreads as u64 * 1000_000_000 / packets_per_second;
+            let micros = s[1].parse().unwrap();
+            let output = match s.len() {
+                2 => output,
+                3 => OutputMode::Silent,
+                _ => unreachable!(),
+            };
+            RequestSchedule {
+                // arrival: Distribution::Constant(ns_per_packet as u64),
+                arrival: Distribution::Exponential(ns_per_packet as f64),
+                service: service,
+                output: output,
+                runtime: Duration::from_micros(micros),
+                rps: packets_per_second as usize,
+                discard_pct: 0.0,
+            }
+        })
+        .collect()
+}
+
+fn process_result_final(
+    sched: &RequestSchedule,
+    results: Vec<ScheduleResult>,
+    wct_start: SystemTime,
+    sched_start: Duration,
+) -> bool {
+    let mut buckets: BTreeMap<u64, usize> = BTreeMap::new();
+    let mut latencies_raw: Vec<u64> = Vec::new();
+
+    let packet_count = results.iter().map(|res| res.packet_count).sum::<usize>();
+    let drop_count = results.iter().map(|res| res.drop_count).sum::<usize>();
+    let never_sent_count = results
+        .iter()
+        .map(|res| res.never_sent_count)
+        .sum::<usize>();
+    let first_send = results.iter().filter_map(|res| res.first_send).min();
+    let last_send = results.iter().filter_map(|res| res.last_send).max();
+    let last_recv = results.iter().filter_map(|res| res.last_recv).max();
+    let first_tsc = results.iter().filter_map(|res| res.first_tsc).min();
+    let start_unix = wct_start + sched_start;
+
+    if let OutputMode::Silent = sched.output {
+        return true;
+    }
+
+    if packet_count <= 1 {
+        eprintln!("[0] WARNING: packet_count <= 1");
+        println!(
+            // "[RESULT] {}, {}, 0, {}, {}, {}",
+            "[RESULT] {}, 0, {}, {}, NA, NA, NA, NA, NA",
+            // sched.arrival.name(),
+            sched.rps,
+            drop_count,
+            never_sent_count,
+            // start_unix.duration_since(UNIX_EPOCH).unwrap().as_secs()
+        );
+        return false;
+    }
+
+    results.iter().for_each(|res| {
+        for (k, v) in &res.latencies {
+            *buckets.entry(*k).or_insert(0) += v;
+        }
+        for lat in &res.latencies_raw {
+            latencies_raw.push(*lat);
+        }
+    });
+    eprintln!("Total # latencies: {}", latencies_raw.len());
+
+    let percentile = |p| {
+        let idx = ((packet_count + drop_count) as f32 * p / 100.0) as usize;
+        if idx >= packet_count {
+            return INFINITY;
+        }
+
+        let mut seen = 0;
+        for k in buckets.keys() {
+            seen += buckets[k];
+            if seen >= idx {
+                return *k as f32;
+            }
+        }
+        return INFINITY;
+    };
+
+    if let OutputMode::Live = sched.output {
+        println!(
+            "RPS: {}\tMedian (us): {: <7}\t99th (us): {: <7}\t99.9th (us): {: <7}",
+            sched.rps,
+            percentile(50.0) as usize,
+            percentile(99.0) as usize,
+            percentile(99.9) as usize
+        );
+        return true;
+    }
+
+    let first_send = first_send.unwrap();
+    let start_unix = wct_start + first_send;
+
+    println!(
+        // "[RESULT] {}, {}, {}, {}, {}, {}, {:.1}, {:.1}, {:.1}, {:.1}, {:.1}, {}, {}",
+        "[RESULT] {}, {}, {}, {}, {:.1}, {:.1}, {:.1}, {:.1}, {:.1}",
+        // sched.arrival.name(),
+        sched.rps,
+        // (packet_count + drop_count) as u64 * 1000_000_000
+        //     / duration_to_ns(last_send.unwrap() - first_send),
+        packet_count as u64 * 1000_000_000 / duration_to_ns(last_recv.unwrap() - first_send),
+        drop_count,
+        never_sent_count,
+        percentile(50.0),
+        percentile(90.0),
+        percentile(99.0),
+        percentile(99.9),
+        percentile(99.99),
+        // start_unix.duration_since(UNIX_EPOCH).unwrap().as_secs(),
+        // first_tsc.unwrap()
+    );
+
+    eprintln!("\n\n[0] Writing data into files...");
+    // return true;
+    unsafe {
+        if let Some(exptid) = &EXPTID {
+            if exptid != "null" {
+                // Write latency_count file: [latency],[count]
+                let latency_count_path = format!("{}.latency_count", exptid);
+                match File::create(&latency_count_path) {
+                    Ok(mut file) => {
+                        for (latency, count) in buckets.iter() {
+                            writeln!(file, "{},{}", latency, count).expect("Failed to write to latency_count file");
+                        }
+                        eprintln!("Wrote latency_count to {}", latency_count_path);
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to create file {}: {:?}", latency_count_path, e);
+                    }
+                }
+                return true;
+                // Write .latency file with statistics
+                if let Ok(mut file) = File::create(format!("{}.latency", exptid)) {
+                    let mut latencies: Vec<f64> = Vec::new();
+                    let mut counts: Vec<usize> = Vec::new();
+
+                    for (k, v) in buckets.iter() {
+                        latencies.push(*k as f64);
+                        counts.push(*v);
+                    }
+
+                    let total_count: u32 = counts.iter().map(|&count| count as u32).sum();
+
+
+                    write!(file, "Latencies: \n").expect("Failed to write to file");
+                    let mut cumulative_percentage = 0.0;
+                    for (k, v) in buckets.iter() {
+                        let percentage = (*v as f64 / total_count as f64) * 100.0; // Calculate the percentage
+                        cumulative_percentage += percentage;
+                        write!(file, "{},{},{:.2}\n", k, buckets[k], cumulative_percentage).expect("Failed to write to file");
+                    }
+                    writeln!(file, "").expect("Failed to write to file");
+
+
+                    let mean: f64 = latencies.iter().zip(counts.iter()).map(|(&l, &c)| l * c as f64).sum::<f64>() / total_count as f64;
+                    let squared_diffs: Vec<f64> = latencies.iter().map(|&x| (x - mean).powi(2)).collect();
+                    let variance: f64 = squared_diffs.iter().sum::<f64>() / total_count as f64;
+                    let standard_deviation: f64 = variance.sqrt();
+                    // let sqdiff = squared_diffs.iter().sum::<f64>();
+                    // writeln!(file, "Total Count: {}", total_count).expect("Failed to write to file");
+                    writeln!(file, "Mean: {:.2}", mean).expect("Failed to write to file");
+                    // writeln!(file, "squared_diffs: {:.2}", sqdiff).expect("Failed to write to file");
+                    // writeln!(file, "variance: {:.2}", variance).expect("Failed to write to file");
+                    writeln!(file, "Standard Deviation: {:.2}", standard_deviation).expect("Failed to write to file");
+
+                } else {
+                    eprintln!("Failed to create file {}.latency", exptid);
+                }
+
+                // if let Ok(mut file) = File::create(format!("{}.latency_raw", exptid)) {
+                //     for (index, latency) in latencies_raw.iter().enumerate() {
+                //         writeln!(file, "{},{}", index, latency)
+                //             .expect("Failed to write to file");
+                //     }
+                // } else {
+                //     eprintln!("Failed to create file {}..latency_raw", exptid);
+                // }
+            }
+        }
+    }
+
+
+    if let OutputMode::Trace = sched.output {
+        if let Some(exptid) = unsafe {&EXPTID} {
+            if exptid != "null" {
+                let sched_file_path = format!("{}.request_sched", exptid);
+                let mut sched_file = OpenOptions::new()
+                                        .append(true)
+                                        .create(true)
+                                        .open(&sched_file_path)
+                                        .expect("Failed to open file");
+                let lat_file_path = format!("{}.latency_trace", exptid);
+                let mut lat_file = OpenOptions::new()
+                                                .append(true)
+                                                .create(true)
+                                                .open(&lat_file_path)
+                                                .expect("Failed to open file");
+                
+                #[cfg(feature = "server-reply-analysis")]
+                let mut server_reply_file = {
+                    let server_reply_file_path = format!("{}.server_reply", exptid);
+                    OpenOptions::new()
+                        .append(true)
+                        .create(true)
+                        .open(&server_reply_file_path)
+                        .expect("Failed to open file")
+                };
+
+                for p in results.into_iter().filter_map(|p| p.trace).kmerge() {
+                    let target_start = duration_to_ns(p.target_start);
+                    writeln!(sched_file, "{},{}", target_start, p.client_port);
+                    if target_start < 200_000_000{
+                        continue; // discard the first 100ms for warmup
+                    }
+                    if let Some(completion_time) = p.completion_time {
+                        let target_start = duration_to_ns(p.target_start);
+                        let actual_start = duration_to_ns(p.actual_start.unwrap());
+                        let lat_in_us = duration_to_ns(completion_time - p.actual_start.unwrap()) as u64 / 1000;
+                        // unsafe{ LATENCY_TRACE_RESULTS.push((duration_to_ns(actual_start), lat)) };
+                        writeln!(lat_file, "{},{},{},{}", target_start,actual_start, lat_in_us, p.client_port);
+                        
+                        #[cfg(feature = "server-reply-analysis")]
+                        {
+                            let ServerMetadata { timestamp, server_port, queue_len, conn_count, response_time_delta } = p.server_metadata.unwrap();
+                            
+                            writeln!(server_reply_file, "{target_start},{actual_start},{timestamp},{server_port},{lat_in_us},{queue_len},{conn_count},{response_time_delta}").expect("Failed to write to server_reply_file");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    true
+}
+
+fn process_result(sched: &RequestSchedule, packets: &mut [Packet]) -> Option<ScheduleResult> {
+    // eprintln!("[process_result] packets.len(): {}", packets.len());
+    if packets.len() == 0 {
+        return None;
+    }
+
+    // Discard the first X% of the packets.
+    let pidx = packets.len() as f32 * sched.discard_pct / 100.0;
+    let packets = &mut packets[pidx as usize..];
+
+    let mut never_sent = 0;
+    let mut dropped = 0;
+    let mut latencies = BTreeMap::new();
+    let mut latencies_raw: Vec<u64> = Vec::new(); 
+    for p in packets.iter() {
+        // eprintln!("client_port: {}, actual_start: {:?}, completion_time: {:?}", p.client_port, p.actual_start, p.completion_time);
+        match (p.actual_start, p.completion_time) {
+            (None, _) => {
+                // eprintln!("never sent!");
+                never_sent += 1
+            },
+            (_, None) => {
+                // eprintln!("dropped!");
+                dropped += 1
+            },
+            (Some(ref start), Some(ref end)) => {
+                // println!("success!");
+                let latency_ns = duration_to_ns(*end - *start);
+                // Add the latency to the latencies_raw vector
+                latencies_raw.push(latency_ns / 1000);
+                // eprintln!("{:?} {:?} {}", start, end, latency_ns/1000);
+                // Update the latencies BTreeMap
+                *latencies.entry(latency_ns / 1000).or_insert(0) += 1;
+            }
+        }
+    }
+    // println!("packets.len(): {}, dropped: {}, never_sent: {}", packets.len(), dropped, never_sent);
+    if packets.len() - dropped - never_sent <= 1 {
+        return None;
+    }
+
+    if let OutputMode::Silent = sched.output {
+        return None;
+    }
+
+    let trace = match sched.output {
+        OutputMode::Trace => {
+            let mut traceresults: Vec<_> = packets
+                .into_iter()
+                .filter_map(|p| {
+                    // if !p.completion_time.is_some() {
+                    //     return None;
+                    // }
+
+                    Some(TraceResult {
+                        actual_start: p.actual_start,
+                        target_start: p.target_start,
+                        completion_time: p.completion_time,
+                        server_tsc: p.completion_server_tsc.unwrap_or(0),
+                        client_port: p.client_port,
+                        server_metadata: p.server_metadata,
+                    })
+                })
+                .collect();
+            traceresults.sort_by_key(|p| p.server_tsc);
+            Some(traceresults)
+        }
+        _ => None,
+    };
+    
+    Some(ScheduleResult {
+        packet_count: packets.len() - dropped - never_sent,
+        drop_count: dropped,
+        never_sent_count: never_sent,
+        first_send: packets.iter().filter_map(|p| p.actual_start).min(),
+        last_send: packets.iter().filter_map(|p| p.actual_start).max(),
+        last_recv: packets.iter().filter_map(|p| p.completion_time).max(),
+        latencies: latencies,
+        latencies_raw: latencies_raw,
+        first_tsc: packets.iter().filter_map(|p| p.completion_server_tsc).min(),
+        trace: trace,
+    })
+}
+
+fn lognormal_interarrival(rand_gaussian: f64) -> f64 {
+    lognormal(6.2726064589176, 1.8779582422664103, rand_gaussian)/10.0
+}
+
+fn lognormal_on(rand_gaussian: f64) -> f64 {
+    // lognormal(5.0, 0.5, rand_gaussian)
+    lognormal(2.868183746231741, 0.4301567266932548, rand_gaussian)
+}
+
+fn lognormal_off(rand_gaussian: f64) -> f64 {
+    // lognormal(5.0, 0.5, rand_gaussian)
+    lognormal(1.0872546045494296, 0.38168878514903204, rand_gaussian)
+}
+/* unit: microseconds */
+
+fn lognormal(mu: f64, sigma: f64, rand_gaussian: f64) -> f64 {
+    f64::exp(mu + sigma * rand_gaussian)
+}
+
+fn gen_packets_for_schedule(schedules: &Arc<Vec<RequestSchedule>>, src_port: u16) -> (Vec<Packet>, Vec<usize>) {
+    use rand_distr::Distribution;
+    let mut packets: Vec<Packet> = Vec::new();
+    
+    let mut rng: Mt64 = match src_port{
+        0 => Mt64::new(rand::thread_rng().gen::<u64>()),
+        _ => Mt64::new(src_port as u64),
+    };
+    
+    let mut sched_boundaries = Vec::new();
+    let mut last = 100_000_000; //as u64 + rng.gen::<u64>() % 5;
+    let mut end = 100_000_000;
+    
+    if let Some(onoff) = unsafe{ &ONOFF } {
+        if onoff == "1" {
+            // eprintln!("Running with On/Off pattern");
+            let mut important_rand: StdRng = StdRng::seed_from_u64(src_port as u64);
+
+            // Define the mean (mu) and standard deviation (sigma) of the Gaussian distribution
+            let mu = 0.0;
+            let sigma = 1.0;
+            let normal = Normal::new(mu, sigma).unwrap();    
+            let mut is_on = true;
+
+            let mut onoff_timestamp = last;
+            for sched in schedules.iter() {
+                // eprintln!("{}, {:?}", src_port, sched.arrival);
+                // let mut is_on = true;
+                end += duration_to_ns(sched.runtime);
+
+                let mut onoff_intervals: Vec<(bool, (u64, u64))> = Vec::new();
+                let mut total_on_time: u64 = 0;
+                loop{
+                    let rand_gaussian = normal.sample(&mut important_rand);
+                    let interval_in_ns = match is_on{
+                        // true => std::cmp::min( (lognormal_on(rand_gaussian) * 1000000.0) as u64, end - onoff_timestamp ),
+                        // false => std::cmp::min( (lognormal_off(rand_gaussian) * 1000000.0) as u64, end - onoff_timestamp ),
+                        true => (lognormal_on(rand_gaussian) * 1000.0) as u64,
+                        false => (lognormal_off(rand_gaussian) * 1000.0) as u64,
+                    };
+                    // eprintln!("{:?}, {}", is_on, interval_in_ns);
+                    
+                    // if onoff_timestamp + interval_in_ns == end {
+                    //     is_on = true;
+                    // }
+                    onoff_intervals.push((is_on, (onoff_timestamp, onoff_timestamp + interval_in_ns)));
+                    // eprintln!("{}, {}, {}, {}, {}", src_port, is_on, onoff_timestamp, interval_in_ns, end);
+                    onoff_timestamp = onoff_timestamp + interval_in_ns;
+                    
+                    if is_on {
+                        total_on_time = total_on_time + interval_in_ns;
+                    }
+                    is_on = !is_on;
+                    if onoff_timestamp >= end {
+                        break;
+                    }
+                }
+                let ontime_weight = total_on_time as f64 / duration_to_ns(sched.runtime) as f64;
+                // println!("total_on_time: {}", total_on_time);
+                
+                // onoff_intervals = vec![
+                //     (true, (100_000_000, 2_100_000_000)),
+                //     (false, (2_100_000_000, 7_100_000_000)),
+                //     (true, (7_100_000_000, 10_100_000_000)),
+                //     // Add more pairs as needed
+                // ];
+                // ontime_weight = 1.0/2.0;
+                for (is_on, (_, interval_end)) in &onoff_intervals {
+                    loop {
+                        if last >= *interval_end {
+                            break;
+                        }
+                        // eprintln!("{}, {}, {}", src_port, last, is_on);
+                        if *is_on {
+                            packets.push(Packet {
+                                randomness: rng.gen::<u64>(),
+                                target_start: Duration::from_nanos(last),
+                                work_iterations: sched.service.sample(&mut rng),
+                                client_port: src_port,
+                                ..Default::default()
+                            });
+                        }
+                        let nxt = last + sched.arrival.onoff_sample(&mut rng, ontime_weight);
+                        // let nxt = last + sched.arrival.sample(&mut rng);
+                        last = nxt;
+                    }
+                    
+                }
+                sched_boundaries.push(packets.len());
+            }
+        }
+        else{
+            // eprintln!("Running w/o On/Off pattern");
+            for sched in schedules.iter() {
+                // eprintln!("[sched] src_port: {}, rps: {}", src_port, sched.rps);
+                end += duration_to_ns(sched.runtime);
+                if sched.rps == 0 {
+                    last = end;
+                    packets.push(Packet {
+                        randomness: rng.gen::<u64>(),
+                        target_start: Duration::from_nanos(last),
+                        work_iterations: sched.service.sample(&mut rng),
+                        client_port: src_port,
+                        ..Default::default()
+                    });
+                }else{
+                    loop {
+                        // eprintln!("src_port: {}, end: {}, last: {}", src_port, end, last);
+                        if last >= end {
+                            break;
+                        }
+                        packets.push(Packet {
+                            randomness: rng.gen::<u64>(),
+                            target_start: Duration::from_nanos(last),
+                            work_iterations: sched.service.sample(&mut rng),
+                            client_port: src_port,
+                            ..Default::default()
+                        });
+            
+                        let nxt = last + sched.arrival.sample(&mut rng);
+                        if nxt >= end {
+                            last = nxt;
+                            break;
+                        }
+                        last = nxt;
+                    }
+                }
+                sched_boundaries.push(packets.len());
+            }
+        }
+    }
+    (packets, sched_boundaries)
+}
+
+fn run_client_worker(
+    proto: Arc<Box<dyn LoadgenProtocol>>,
+    backend: Backend,
+    addr: SocketAddrV4,
+    tport: Transport,
+    wg: shenango::WaitGroup,
+    wg_start: shenango::WaitGroup,
+    schedules: Arc<Vec<RequestSchedule>>,
+    index: usize,
+    live_mode_socket: Option<Arc<Connection>>,
+) -> Vec<Option<ScheduleResult>> {
+    let mut payload = Vec::with_capacity(4096);
+    let (mut packets, sched_boundaries) = gen_packets_for_schedule(&schedules, index as u16);
+    let src_addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), (index) as u16);
+    let live_mode = live_mode_socket.is_some();
+    // eprintln!("index {} packets.len() {}", index, packets.len());
+    let socket = match live_mode_socket {
+        Some(sock) => sock,
+        _ => Arc::new(match tport {
+            Transport::Tcp => backend.create_tcp_connection(Some(src_addr), addr).unwrap(),
+            Transport::Udp => backend.create_udp_connection(src_addr, Some(addr)).unwrap(),
+        }),
+    };
+
+    let packets_per_thread = packets.len();
+    let socket2 = socket.clone();
+    let rproto = proto.clone();
+    let wg2 = wg.clone();
+    let received_packets = Arc::new(AtomicUsize::new(0));
+    let received_packets2 = received_packets.clone();
+    
+    let receive_thread = backend.spawn_thread(move || {
+        let mut recv_buf = vec![0; 4096];
+        // (Instant, tsc, server port, client port, queue len, conn count)
+        // let mut receive_times: Vec<Option<(Instant, u64, u16, u16, u32, u16)>> = vec![None; packets_per_thread];
+        // (Instant, client port, server metadata)
+        let mut receive_times: Vec<Option<(Instant, Option<ServerMetadata>)>> = vec![None; packets_per_thread];
+        let mut buf = Buffer::new(&mut recv_buf);
+        let use_ordering = rproto.uses_ordered_requests();
+        wg2.done();
+        let mut recv_cnt = 0;
+        for i in 0..receive_times.len() {
+            // eprintln!("{} {}", i, receive_times.len());
+            let mut server_metadata = None;
+
+            let response = match rproto.as_http() {
+                Some(http) => http.read_response_with_metadata(&socket2, &mut buf, &mut server_metadata),
+                None => rproto.read_response(&socket2, &mut buf),
+            };
+
+            match response {
+                Ok((mut idx, _tsc)) => {
+                    if use_ordering {
+                        idx = i;
+                    }
+                    // eprintln!("receive");
+                    receive_times[idx] = Some((Instant::now(), server_metadata));
+                    recv_cnt += 1;
+                    received_packets2.store(recv_cnt, Ordering::SeqCst)
+                }
+                Err(e) => {
+                    match e.raw_os_error() {
+                        Some(-103) | Some(-104) => break,
+                        _ => (),
+                    }
+                    if e.kind() != ErrorKind::UnexpectedEof {
+                        println!("Receive thread: {}", e);
+                    }
+                    break;
+                }
+            }
+        }
+        // eprintln!("Returning");
+        receive_times
+    });
+
+    // Start a timer thread that cancels the send thread if it is still running
+    // 500ms after it should have finished by triggering a shutdown on the socket.
+    let port = socket.local_addr().port();
+    // eprintln!("Port: {}, Packets length: {}", port, packets.len());
+    let last = packets[packets.len() - 1].target_start;
+    let socket2 = socket.clone();
+    let wg2 = wg.clone();
+    let wg3 = wg_start.clone();
+    let live_mode2 = live_mode;
+    let mut nsent = 0;
+    let timer = backend.spawn_thread(move || {
+        wg2.done();
+        wg3.wait();
+        if live_mode2 {
+            return;
+        }
+        backend.sleep(last + Duration::from_millis(500));
+        // to test server with some delay
+        // backend.sleep(last + Duration::from_millis(20000));
+        
+        if Arc::strong_count(&socket2) > 1 {
+            socket2.shutdown();
+        }
+    });
+
+    wg.done();
+    wg_start.wait();
+    let start = Instant::now();
+
+    
+    let pl = packets.len();
+    for (i, packet) in packets.iter_mut().enumerate() {
+        // eprintln!("* port: {}, total: {}, nsent: {}", port, pl, nsent);
+        payload.clear();
+        proto.gen_req(i, packet, &mut payload);
+
+        let mut t = start.elapsed();
+        while t + Duration::from_micros(1) < packet.target_start {
+            backend.sleep(packet.target_start - t);
+            t = start.elapsed();
+        }
+        if !live_mode && t > packet.target_start + Duration::from_micros(5) {
+            // eprintln!("* port: {}, NEVER SENT", port);
+            continue;
+        }
+
+        // packet.actual_start = Some(packet.target_start);
+        packet.actual_start = Some(start.elapsed());
+        // eprintln!("* port: {}, SENT", port);
+        #[cfg(feature = "split-requests")]
+        {
+            if let Err(e) = (&*socket).write_all(&payload[..20]) {
+                packet.actual_start = None;
+                match e.raw_os_error() {
+                    Some(-32) | Some(-103) | Some(-104) => {}
+                    _ => println!("Send thread ({}/{}): {}", i, packets.len(), e),
+                }
+                break;
+            }
+            if let Err(e) = (&*socket).write_all(&payload[20..]) {
+                packet.actual_start = None;
+                match e.raw_os_error() {
+                    Some(-32) | Some(-103) | Some(-104) => {}
+                    _ => println!("Send thread ({}/{}): {}", i, packets.len(), e),
+                }
+                break;
+            }
+        }
+
+        #[cfg(not(feature = "split-requests"))]
+        if let Err(e) = (&*socket).write_all(&payload[..]) {
+            packet.actual_start = None;
+            match e.raw_os_error() {
+                Some(-32) | Some(-103) | Some(-104) => {}
+                _ => println!("Send thread ({}/{}): {}", i, packets.len(), e),
+            }
+            break;
+        }
+        nsent += 1; 
+        // eprintln!("* port: {}, total: {}, nsent: {}", port, pl, nsent);
+        // Check if the counter has reached 100
+        // if nsent >= 1000 {
+        //     break;  // Break the loop after 100 iterations
+        // }
+    }
+
+    // wait for the timer thread to end
+    timer.join().unwrap();
+    if let Transport::Tcp = tport {
+        let mut prev_received = received_packets.load(Ordering::SeqCst);
+
+        while received_packets.load(Ordering::SeqCst) < nsent {
+            backend.sleep(Duration::from_secs(1));
+
+            let current_received = received_packets.load(Ordering::SeqCst);
+
+            // Check if the count has increased, otherwise break the loop
+            if current_received == prev_received {
+                break;
+            }
+
+            prev_received = current_received;
+        }
+    }
+
+    socket.shutdown();
+
+    receive_thread
+        .join()
+        .unwrap()
+        .into_iter()
+        .zip(
+            packets
+                .iter_mut()
+                .filter(|p| !proto.uses_ordered_requests() || p.actual_start.is_some()),
+        )
+        .for_each(|(c, p)| {
+            if let Some((inst, server_metadata)) = c {
+                (*p).completion_time = Some(inst - start);
+                (*p).completion_server_tsc = Some(server_metadata.map(|data| data.timestamp).unwrap_or(0));
+                (*p).server_metadata = server_metadata;
+            }
+        });
+
+    let mut start_index = 0;
+    schedules
+        .iter()
+        .zip(sched_boundaries)
+        .map(|(sched, end)| {
+            let mut res = process_result(&sched, &mut packets[start_index..end]);
+            start_index = end;
+            res
+        })
+        .collect::<Vec<Option<ScheduleResult>>>()
+}
+
+fn run_live_client(
+    proto: Arc<Box<dyn LoadgenProtocol>>,
+    backend: Backend,
+    addrs: &Vec<SocketAddrV4>,
+    nthreads: usize,
+    tport: Transport,
+    barrier_group: &mut Option<lockstep::Group>,
+    schedules: Vec<RequestSchedule>,
+) {
+    let schedules = Arc::new(schedules);
+
+    let sockets: Vec<_> = (0..nthreads)
+        .into_iter()
+        .map(|i| {
+            let addr = addrs[i % addrs.len()];
+            let client_idx = 200 + i;
+            let src_addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), client_idx as u16);
+            Arc::new(match tport {
+                Transport::Tcp => backend.create_tcp_connection(Some(src_addr), addr).unwrap(),
+                Transport::Udp => backend.create_udp_connection(src_addr, Some(addr)).unwrap(),
+            })
+        })
+        .collect();
+
+    let wg = shenango::WaitGroup::new();
+    let wg_start = shenango::WaitGroup::new();
+
+    loop {
+        wg.add(3 * nthreads as i32);
+        wg_start.add(1 as i32);
+        let socks = sockets.clone();
+
+        let conn_threads: Vec<_> = (0..nthreads)
+            .into_iter()
+            .zip(socks)
+            .map(|(i, sock)| {
+                let client_idx = 100 + i;
+                let proto = proto.clone();
+                let wg = wg.clone();
+                let wg_start = wg_start.clone();
+                let schedules = schedules.clone();
+                let addr = addrs[i % addrs.len()];
+
+                backend.spawn_thread(move || {
+                    run_client_worker(
+                        proto,
+                        backend,
+                        addr,
+                        tport,
+                        wg,
+                        wg_start,
+                        schedules,
+                        client_idx,
+                        Some(sock.clone()),
+                    )
+                })
+            })
+            .collect();
+
+        wg.wait();
+
+        if let Some(ref mut g) = *barrier_group {
+            g.barrier();
+        }
+
+        wg_start.done();
+        let start_unix = SystemTime::now();
+
+        let mut packets: Vec<Vec<Option<ScheduleResult>>> = conn_threads
+            .into_iter()
+            .map(|s| s.join().unwrap())
+            .collect();
+
+        let mut sched_start = Duration::from_nanos(100_000_000);
+        schedules
+            .iter()
+            .enumerate()
+            .map(|(i, sched)| {
+                let perthread = packets.iter_mut().filter_map(|p| p[i].take()).collect();
+                let r = process_result_final(sched, perthread, start_unix, sched_start);
+                sched_start += sched.runtime;
+                r
+            })
+            .collect::<Vec<bool>>()
+            .into_iter()
+            .all(|p| p);
+    }
+}
+
+fn run_shortflow_client(
+    proto: Arc<Box<dyn LoadgenProtocol>>,
+    backend: Backend,
+    addrs: &Vec<SocketAddrV4>,
+    nthreads: usize,
+    tport: Transport,
+    barrier_group: &mut Option<lockstep::Group>,
+    runtime: Duration,
+    conn_duration_us: u64,
+) {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::{Arc, Mutex};
+    use std::time::Instant;
+
+    let stop_flag = Arc::new(AtomicBool::new(false));
+    let wg = shenango::WaitGroup::new();
+    let stats = Arc::new(Mutex::new(Vec::new()));
+    let conn_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let start = Instant::now();
+
+    for i in 0..nthreads {
+        let stop_flag = stop_flag.clone();
+        let backend = backend.clone();
+        let addr = addrs[i % addrs.len()];
+        let proto = proto.clone();
+        let wg = wg.clone();
+        let stats = stats.clone();
+        let conn_count = conn_count.clone();
+        let client_port = 30000 + i as u16;
+
+        backend.spawn_thread(move || {
+            let mut buffer = vec![0u8; 4096];
+            let mut payload = Vec::with_capacity(4096);
+            let mut rng = rand::thread_rng();
+
+            while !stop_flag.load(Ordering::Relaxed) {
+                let src_addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), client_port);
+
+                if let Ok(mut conn) = match tport {
+                    Transport::Tcp => backend.create_tcp_connection(Some(src_addr), addr),
+                    Transport::Udp => backend.create_udp_connection(src_addr, Some(addr)),
+                } {
+                    conn_count.fetch_add(1, Ordering::Relaxed);
+                    let conn_start = Instant::now();
+
+                    // Shared flags for coordination between main loop and watchdog
+                    let conn_timeout_flag = Arc::new(AtomicBool::new(false));
+                    let conn_done_flag = Arc::new(AtomicBool::new(false));
+                    let conn_timeout_flag_clone = conn_timeout_flag.clone();
+                    let conn_done_flag_clone = conn_done_flag.clone();
+
+                    // Get raw pointer to connection for watchdog thread
+                    struct SendPtr(*const Connection);
+                    unsafe impl Send for SendPtr {}
+                    let conn_ptr = SendPtr(&conn as *const Connection);
+
+                    // Watchdog thread: abort connection after conn_duration_us
+                    let watchdog = backend.spawn_thread(move || {
+                        let start = Instant::now();
+                        let duration = Duration::from_micros(conn_duration_us);
+                        let check_interval = Duration::from_micros(100); // Check every 100us
+
+                        // Sleep in short intervals, checking if main loop is done
+                        while start.elapsed() < duration {
+                            if conn_done_flag_clone.load(Ordering::Relaxed) {
+                                return; // Main loop finished early, no need to abort
+                            }
+                            backend.sleep(check_interval);
+                        }
+
+                        // Duration expired - abort the connection
+                        if !conn_done_flag_clone.load(Ordering::Relaxed) {
+                            conn_timeout_flag_clone.store(true, Ordering::Relaxed);
+                            unsafe { (*conn_ptr.0).abort(); }
+                        }
+                    });
+
+                    // Send requests in closed-loop until conn_duration_us elapsed
+                    while conn_start.elapsed().as_micros() < conn_duration_us as u128
+                          && !conn_timeout_flag.load(Ordering::Relaxed) {
+                        let mut buf = Buffer::new(&mut buffer);
+                        let mut packet = Packet {
+                            randomness: rand::random(),
+                            work_iterations: 1,
+                            target_start: Duration::ZERO,
+                            client_port,
+                            ..Default::default()
+                        };
+
+                        payload.clear();
+                        proto.gen_req(0, &packet, &mut payload);
+
+                        let send_time = Instant::now();
+                        if let Err(_) = conn.write_all(&payload) {
+                            break;
+                        }
+
+                        // Check timeout flag before blocking read
+                        if conn_timeout_flag.load(Ordering::Relaxed) {
+                            break;
+                        }
+
+                        if let Err(_) = proto.read_response(&conn, &mut buf) {
+                            break; // Error (timeout or other), exit
+                        }
+                        let recv_time = Instant::now();
+                        let latency_us = (recv_time - send_time).as_micros() as u64;
+
+                        let mut s = stats.lock().unwrap();
+                        s.push(latency_us);
+                    }
+
+                    // Signal watchdog that main loop is done
+                    conn_done_flag.store(true, Ordering::Relaxed);
+                    // Wait for watchdog (should exit quickly now)
+                    let _ = watchdog.join();
+                    // Abort (RST) instead of graceful close: avoids FIN/TIME_WAIT port-reuse
+                    // stalls on rapid same-port reconnects
+                    conn.abort();
+                    // Connection closes here when conn goes out of scope
+                }
+            }
+
+            wg.done();
+        });
+    }
+
+    // Stopper thread
+    {
+        let stop_flag = stop_flag.clone();
+        backend.spawn_thread(move || {
+            backend.sleep(runtime);
+            stop_flag.store(true, Ordering::Relaxed);
+        });
+    }
+
+    wg.add(nthreads as i32);
+    wg.wait();
+
+    // Output stats
+    let stats = stats.lock().unwrap();
+    let mut data = stats.clone();
+    data.sort();
+    let count = data.len();
+    let total_conns = conn_count.load(Ordering::Relaxed);
+    println!("\n[ShortFlow Results]");
+    println!("Total connections: {}", total_conns);
+    println!("Total requests: {}", count);
+    println!(
+        "Throughput (RPS): {:.2}",
+        count as f64 / runtime.as_secs_f64()
+    );
+    if count > 0 {
+        let percentile = |p: f64| {
+            let idx = ((count as f64) * p / 100.0).ceil() as usize;
+            data.get(idx.min(count - 1)).cloned().unwrap_or(0)
+        };
+        println!("Median (us): {}", percentile(50.0));
+        println!("90th (us): {}", percentile(90.0));
+        println!("99th (us): {}", percentile(99.0));
+    }
+
+    // Write latency_count file: [latency],[count]
+    if count > 0 {
+        // Build latency histogram (buckets)
+        let mut buckets: std::collections::BTreeMap<u64, usize> = std::collections::BTreeMap::new();
+        for lat in data.iter() {
+            *buckets.entry(*lat).or_insert(0) += 1;
+        }
+
+        unsafe {
+            if let Some(exptid) = &EXPTID {
+                if exptid != "null" {
+                    let latency_count_path = format!("{}.shortflow_latency_count", exptid);
+                    match File::create(&latency_count_path) {
+                        Ok(mut file) => {
+                            for (latency, cnt) in buckets.iter() {
+                                writeln!(file, "{},{}", latency, cnt).expect("Failed to write to latency_count file");
+                            }
+                            eprintln!("Wrote latency_count to {}", latency_count_path);
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to create file {}: {:?}", latency_count_path, e);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some(ref mut g) = *barrier_group {
+        g.barrier();
+    }
+}
+
+fn run_client(
+    proto: Arc<Box<dyn LoadgenProtocol>>,
+    backend: Backend,
+    addrs: &Vec<SocketAddrV4>,
+    nthreads: usize,
+    tport: Transport,
+    barrier_group: &mut Option<lockstep::Group>,
+    schedules: Vec<RequestSchedule>,
+    index: usize,
+) -> bool {
+    let schedules = Arc::new(schedules);
+    let wg = shenango::WaitGroup::new();
+
+    wg.add(3 * nthreads as i32);
+    let wg_start = shenango::WaitGroup::new();
+    wg_start.add(1 as i32);
+
+    let conn_threads: Vec<_> = (0..nthreads)
+        .into_iter()
+        .map(|i| {
+            let client_idx = 100 + (index * nthreads) + i;
+            let proto = proto.clone();
+            let wg = wg.clone();
+            let wg_start = wg_start.clone();
+            let schedules = schedules.clone();
+            let addr = addrs[i % addrs.len()];
+
+            backend.spawn_thread(move || {
+                run_client_worker(
+                    proto, backend, addr, tport, wg, wg_start, schedules, client_idx, None,
+                )
+            })
+        })
+        .collect();
+
+    backend.sleep(Duration::from_secs(1));
+    wg.wait();
+
+    if let Some(ref mut g) = *barrier_group {
+        g.barrier();
+    }
+
+    wg_start.done();
+    let start_unix = SystemTime::now();
+
+    let mut packets: Vec<Vec<Option<ScheduleResult>>> = conn_threads
+        .into_iter()
+        .map(|s| s.join().unwrap())
+        .collect();
+
+    let mut sched_start = Duration::from_nanos(100_000_000);
+    schedules
+        .iter()
+        .enumerate()
+        .map(|(i, sched)| {
+            let perthread = packets.iter_mut().filter_map(|p| p[i].take()).collect();
+            let r = process_result_final(sched, perthread, start_unix, sched_start);
+            sched_start += sched.runtime;
+            r
+        })
+        .collect::<Vec<bool>>()
+        .into_iter()
+        .all(|p| p)
+}
+
+fn run_local(
+    backend: Backend,
+    nthreads: usize,
+    worker: Arc<FakeWorker>,
+    schedules: Vec<RequestSchedule>,
+) -> bool {
+    let schedules = Arc::new(schedules);
+
+    let packet_schedules: Vec<Vec<Packet>> = (0..nthreads)
+        .map(|_| gen_packets_for_schedule(&schedules, 0).0)
+        .collect();
+
+    let start_unix = SystemTime::now();
+    let start = Instant::now();
+
+    struct AtomicU64Pointer(*const AtomicU64);
+    unsafe impl Send for AtomicU64Pointer {}
+
+    let mut send_threads = Vec::new();
+    for mut packets in packet_schedules {
+        let worker = worker.clone();
+        let schedules = schedules.clone();
+        send_threads.push(backend.spawn_thread(move || {
+            let remaining = Arc::new(AtomicUsize::new(packets.len()));
+            for i in 0..packets.len() {
+                let (work_iterations, completion_time_ns, rnd) = {
+                    let packet = &mut packets[i];
+
+                    let mut t = start.elapsed();
+                    while t < packet.target_start {
+                        t = start.elapsed();
+                    }
+
+                    packet.actual_start = Some(start.elapsed());
+                    (
+                        packet.work_iterations,
+                        AtomicU64Pointer(&packet.completion_time_ns as *const AtomicU64),
+                        packet.randomness,
+                    )
+                };
+
+                let remaining = remaining.clone();
+                let worker = worker.clone();
+                backend.spawn_thread(move || {
+                    worker.work(work_iterations, rnd);
+                    unsafe {
+                        (*completion_time_ns.0)
+                            .store(start.elapsed().as_nanos() as u64, Ordering::SeqCst);
+                    }
+                    remaining.fetch_sub(1, Ordering::SeqCst);
+                });
+            }
+
+            while remaining.load(Ordering::SeqCst) > 0 {
+                // do nothing
+            }
+
+            for p in packets.iter_mut() {
+                p.completion_time = Some(Duration::from_nanos(
+                    p.completion_time_ns.load(Ordering::SeqCst),
+                ));
+            }
+
+            let mut start = Duration::from_nanos(100_000_000);
+            let mut start_index = 0;
+
+            schedules
+                .iter()
+                .map(|sched| {
+                    let npackets = packets[start_index..]
+                        .iter()
+                        .position(|p| p.target_start >= start + sched.runtime)
+                        .unwrap_or(packets.len() - start_index - 1)
+                        + 1;
+                    let res =
+                        process_result(&sched, &mut packets[start_index..start_index + npackets]);
+                    start = packets[start_index + npackets - 1].target_start;
+                    start_index += npackets;
+                    res
+                })
+                .collect::<Vec<Option<ScheduleResult>>>()
+        }))
+    }
+
+    let mut packets: Vec<Vec<Option<ScheduleResult>>> = send_threads
+        .into_iter()
+        .map(|s| s.join().unwrap())
+        .collect();
+
+    let mut sched_start = Duration::from_nanos(100_000_000);
+    schedules
+        .iter()
+        .enumerate()
+        .map(|(i, sched)| {
+            let perthread = packets.iter_mut().filter_map(|p| p[i].take()).collect();
+            let r = process_result_final(sched, perthread, start_unix, sched_start);
+            sched_start += sched.runtime;
+            r
+        })
+        .collect::<Vec<bool>>()
+        .into_iter()
+        .all(|p| p)
+}
+
+fn get_zipf_distribution(
+    total_pps: usize,
+    alpha: f64,
+    nthreads: usize
+) -> impl Iterator<Item = f64> {
+    /*
+        zipf = [0] * n
+        c = 0.0
+        for i in range(n):
+            c = c + (1.0 / (i+1)**alpha)
+        c = 1 / c
+        for i in range(n):
+            zipf[i] = (c / (i+1)**alpha)
+        return zipf
+    */
+
+    // static mut COUNTER: u64 = 0;
+    // unsafe{ COUNTER += 34752; }
+    let c = (1..nthreads + 1)
+        .fold(0.0, |acc, i| acc + (i as f64).powf(alpha).recip())
+        .recip();
+    // let c = 1.0 / nthreads as f64; // uniform
+
+    let mut range: Vec<_> = (1..=nthreads).collect();
+    
+    // range.shuffle(&mut StdRng::seed_from_u64(unsafe{ COUNTER }));
+    // for i in &range {
+    //     // let value = total_pps as f64 * (c / (*i as f64).powf(alpha));
+    //     let value = total_pps as f64 * c;
+    //     eprintln!("i = {}, value = {}", i, value);
+    // }
+    range.into_iter().map(move |i| (total_pps as f64 * (c / (i as f64).powf(alpha))))
+    // range.into_iter().map(move |i| (total_pps as f64 * c)) // uniform
+}
+
+fn get_partial_uniform_distribution(
+    total_pps: usize,
+    nthreads: usize,
+    n_on_threads: usize,
+) -> impl Iterator<Item = f64> {
+    // Ensure we don't exceed the number of threads
+    assert!(n_on_threads <= nthreads, "n_on_threads cannot exceed nthreads");
+
+    let rate_per_thread = total_pps as f64 / n_on_threads as f64;
+
+    (0..nthreads).map(move |i| {
+        if i < n_on_threads {
+            rate_per_thread
+        } else {
+            270.0 // temporary value to simulate low-rate clients
+        }
+    })
+}
+
+fn gen_single_conn_schedule(
+    runtime: Duration,
+    pps: f64,
+    output: OutputMode,
+    distribution: Distribution,
+    ramp_up_seconds: usize,
+    discard_pct: f32,
+) -> Vec<RequestSchedule> {
+    let mut sched: Vec<RequestSchedule> = Vec::new();
+
+    /* Ramp up in 100ms increments */
+    for t in 1..(10 * ramp_up_seconds) {
+        let rate = t as f64 * pps / (ramp_up_seconds as f64 * 10.0);
+
+        if rate as usize / 1000 == 0 {
+            continue;
+        }
+
+        let ns_per_packet = 1_000_000_000.0 / rate;
+
+        // eprintln!("rampup {} pps : {} ns", rate as usize, ns_per_packet as usize);
+
+        sched.push(RequestSchedule {
+            // arrival: Distribution::Constant(ns_per_packet as u64),
+            arrival: Distribution::Exponential(ns_per_packet as f64),
+            service: distribution,
+            output: OutputMode::Silent,
+            runtime: Duration::from_millis(100),
+            rps: rate as usize,
+            discard_pct: 0.0,
+        });
+    }
+
+    let ns_per_packet = 1_000_000_000.0 / pps;
+
+    // eprint!("{}    ", pps as usize);
+    
+    sched.push(RequestSchedule {
+        // arrival: Distribution::Constant(ns_per_packet as u64),
+        arrival: Distribution::Exponential(ns_per_packet as f64),
+        service: distribution,
+        output,
+        runtime,
+        rps: pps as usize,
+        discard_pct,
+    });
+
+    sched
+}
+
+fn zipf_gen_loadshift_experiment(
+    spec: &str,
+    service: Distribution,
+    nthreads: usize,
+    alpha: f64,
+    output: OutputMode,
+) -> (Vec<Vec<RequestSchedule>>, Vec<usize>) {
+    spec.split(",")
+        .fold(
+            (vec![vec![]; nthreads], vec![]),
+            |(mut acc, mut ppss), step_spec| {
+                let s: Vec<&str> = step_spec.split(":").collect();
+                assert!(s.len() >= 2 && s.len() <= 3);
+                let packets_per_second: u64 = s[0].parse().unwrap();
+                let micros = s[1].parse().unwrap();
+                let output = match s.len() {
+                    2 => output,
+                    3 => OutputMode::Silent,
+                    _ => unreachable!(),
+                };
+                // eprintln!("\n"); 
+                ppss.push(packets_per_second as usize);
+                get_zipf_distribution(packets_per_second as usize, alpha, nthreads)
+                    .enumerate()
+                    .for_each(|(i, mut pps)| {
+                        if pps < 1.0 {
+                            pps = 1.0; // generate at least 1 packet per second
+                        }
+                        let ns_per_packet = 1_000_000_000.0 / pps;
+                        eprint!("{}    ", pps as usize);
+                        acc[i].push(
+                            RequestSchedule {
+                                // arrival: Distribution::Constant(ns_per_packet as u64),
+                                arrival: Distribution::Exponential(ns_per_packet as f64),
+                                service,
+                                output,
+                                runtime: Duration::from_micros(micros),
+                                rps: pps as usize,
+                                discard_pct: 0.0,
+                            }
+                        );
+                    });
+                (acc, ppss)
+            }
+        )
+}
+
+fn zipf_gen_per_server_loadshift_experiment(
+    spec: &str,
+    service: Distribution,
+    nthreads: usize,
+    alpha: f64,
+    output: OutputMode,
+    num_servers: usize,
+) -> Vec<Vec<RequestSchedule>> {
+    
+    let num_conns_per_server = nthreads/num_servers;
+
+    let mut schedules: Vec<Vec<RequestSchedule>> = vec![vec![]; nthreads];
+    for (server_idx, per_server_step_spec) in spec.split("/").enumerate(){
+        // eprintln!("server_idx: {}, per_server_step_spec: {}", server_idx, per_server_step_spec);    
+        for (step_idx, step_spec) in per_server_step_spec.split(",").enumerate(){
+            // eprintln!("* step_idx: {}, step_spec: {}", step_idx, step_spec);    
+            let s: Vec<&str> = step_spec.split(":").collect();
+            assert!(s.len() == 2);
+            
+            let pps_range: Vec<&str> = s[0].split("-").collect();
+            let micros: u64 = s[1].parse().unwrap();
+            
+            let (pps_start, pps_end): (i64, i64) = match pps_range.len() {
+                2 => (pps_range[0].parse().unwrap(), pps_range[1].parse().unwrap()),
+                _ => (pps_range[0].parse().unwrap(), pps_range[0].parse().unwrap()),
+            };
+
+            if pps_start == pps_end {
+                get_zipf_distribution(pps_start as usize, alpha, num_conns_per_server)
+                    .enumerate()
+                    .for_each(|(conn_idx, pps)| {
+                        let ns_per_packet = 1_000_000_000.0 / pps;
+                        // eprint!("{}    ", pps as usize);
+                        schedules[conn_idx * num_servers + server_idx].push(
+                            RequestSchedule {
+                                // arrival: Distribution::Constant(ns_per_packet as u64),
+                                arrival: Distribution::Exponential(ns_per_packet as f64),
+                                service,
+                                output,
+                                runtime: Duration::from_micros(micros),
+                                rps: pps as usize,
+                                discard_pct: 0.0,
+                            }
+                        );
+                    });
+            }else {
+                let pps_interval = (pps_end - pps_start) / (micros.to_i64().unwrap()/1000);
+                for t in 1..(micros/1000 + 1) { /* Ramp up in 1ms increments */
+                    let pps_step = pps_start + (pps_interval * t.to_i64().unwrap());
+                    // eprintln!("pps_step: {}", pps_step);
+                    get_zipf_distribution(pps_step as usize, alpha, num_conns_per_server)
+                        .enumerate()
+                        .for_each(|(conn_idx, pps)| {
+                            let ns_per_packet = 1_000_000_000.0 / pps;
+                            // eprint!("{}    ", pps as usize);
+                            schedules[conn_idx * num_servers + server_idx].push(
+                                RequestSchedule {
+                                    // arrival: Distribution::Constant(ns_per_packet as u64),
+                                    arrival: Distribution::Exponential(ns_per_packet as f64),
+                                    service,
+                                    output,
+                                    runtime: Duration::from_millis(1),
+                                    rps: pps as usize,
+                                    discard_pct: 0.0,
+                                }
+                            );
+                        });
+                }
+            }
+        }
+    }
+    schedules
+}
+
+
+fn gen_partial_uniform_experiment(
+    packets_per_second: usize,
+    spec: &str,
+    service: Distribution,
+    nthreads: usize,
+    output: OutputMode,
+) -> Vec<Vec<RequestSchedule>> {
+    let mut schedules: Vec<Vec<RequestSchedule>> = vec![vec![]; nthreads];
+    for (step_idx, step_spec) in spec.split(",").enumerate(){
+        // eprintln!("* step_idx: {}, step_spec: {}", step_idx, step_spec);    
+        let s: Vec<&str> = step_spec.split(":").collect();
+        assert!(s.len() == 2);
+        
+        let n_on_threads: usize = s[0].parse().unwrap();
+        let micros: u64 = s[1].parse().unwrap();
+        
+        get_partial_uniform_distribution(packets_per_second, nthreads, n_on_threads)
+            .enumerate()
+            .for_each(|(conn_idx, mut pps)| {
+                let mut ns_per_packet: f64 = 0.0;
+                if pps != 0.0 {
+                    ns_per_packet = 1_000_000_000.0 / pps;
+                    if pps < 1.0 {
+                        pps = 1.0; // Set pps to 1 to discriminate it from real 0
+                    }
+                }
+                // eprint!("{} pps ({} ns/pkt)         //", pps, ns_per_packet);
+                schedules[conn_idx].push(
+                    RequestSchedule {
+                        // arrival: Distribution::Constant(ns_per_packet as u64),
+                        arrival: Distribution::Exponential(ns_per_packet as f64),
+                        service,
+                        output,
+                        runtime: Duration::from_micros(micros),
+                        rps: pps as usize,
+                        discard_pct: 0.0,
+                    }
+                );
+            });
+    }
+    
+    schedules
+}
+
+fn process_per_conn_result_final(
+    total_pps: usize,
+    scheds: Vec<RequestSchedule>,
+    results: Vec<ScheduleResult>,
+    wct_start: SystemTime,
+    sched_start: Duration,
+) -> bool {
+    let mut buckets: BTreeMap<u64, usize> = BTreeMap::new();
+    let mut latencies_raw: Vec<u64> = Vec::new();
+
+    let packet_count = results.iter().map(|res| res.packet_count).sum::<usize>();
+    let drop_count = results.iter().map(|res| res.drop_count).sum::<usize>();
+    let never_sent_count = results
+        .iter()
+        .map(|res| res.never_sent_count)
+        .sum::<usize>();
+    let first_send = results.iter().filter_map(|res| res.first_send).min();
+    let last_send = results.iter().filter_map(|res| res.last_send).max();
+    let last_recv = results.iter().filter_map(|res| res.last_recv).max();
+    let first_tsc = results.iter().filter_map(|res| res.first_tsc).min();
+    let start_unix = wct_start + sched_start;
+
+    if let OutputMode::Silent = scheds[0].output {
+        return true;
+    }
+
+    // let total_pps = scheds.iter().map(|e| e.rps).sum::<usize>();
+
+    if packet_count <= 1 {
+        eprintln!("[1] WARNING: packet_count <= 1");
+        println!(
+            "\n\n[RESULT] {}, {}, 0, {}, {}, {}",
+            scheds[0].arrival.name(),
+            total_pps,
+            drop_count,
+            never_sent_count,
+            start_unix.duration_since(UNIX_EPOCH).unwrap().as_secs()
+        );
+        return false;
+    }
+
+    results.iter().for_each(|res| {
+        if *res != Default::default() {
+            for (k, v) in &res.latencies {
+                *buckets.entry(*k).or_insert(0) += v;
+            }
+            for lat in &res.latencies_raw {
+                latencies_raw.push(*lat);
+            }
+        }
+    });
+
+    let percentile = |p| {
+        let idx = ((packet_count + drop_count) as f32 * p / 100.0) as usize;
+        if idx >= packet_count {
+            return INFINITY;
+        }
+
+        let mut seen = 0;
+        for k in buckets.keys() {
+            seen += buckets[k];
+            if seen >= idx {
+                return *k as f32;
+            }
+        }
+        return INFINITY;
+    };
+
+    if let OutputMode::Live = scheds[0].output {
+        println!(
+            "RPS: {}\tMedian (us): {: <7}\t99th (us): {: <7}\t99.9th (us): {: <7}",
+            total_pps,
+            percentile(50.0) as usize,
+            percentile(99.0) as usize,
+            percentile(99.9) as usize
+        );
+        return true;
+    }
+
+    let first_send = first_send.unwrap();
+    let start_unix = wct_start + first_send;
+
+    let target = results.iter().map(|res| {
+        if *res == Default::default() {
+            0
+        } else {
+            (res.packet_count + res.drop_count) as u64 * 1000_000_000
+                / duration_to_ns(res.last_send.unwrap() - res.first_send.unwrap())
+        }
+    }).fold(0, |s, e| s + e);
+
+    let actual = results.iter().map(|res| {
+        if *res == Default::default() {
+            0
+        } else {
+            res.packet_count as u64 * 1000_000_000 / duration_to_ns(res.last_recv.unwrap() - res.first_send.unwrap())
+        }
+    }).fold(0, |s, e| s + e);
+
+    println!(
+        // "\n\n[RESULT] {}, {}, {}, {}, {}, {}, {:.1}, {:.1}, {:.1}, {:.1}, {:.1}, {}, {}",
+        "\n\n[RESULT] {}, {}, {}, {}, {:.1}, {:.1}, {:.1}, {:.1}, {:.1}, {}, {}",
+        // scheds[0].arrival.name(),
+        total_pps,
+        // target,
+        actual,
+        drop_count,
+        never_sent_count,
+        percentile(50.0),
+        percentile(90.0),
+        percentile(99.0),
+        percentile(99.9),
+        percentile(99.99),
+        start_unix.duration_since(UNIX_EPOCH).unwrap().as_secs(),
+        first_tsc.unwrap()
+    );
+
+    eprintln!("\n\n[1] Writing data into files...");
+    // return true;
+    unsafe {
+        if let Some(exptid) = &EXPTID {
+            if exptid != "null" {
+                // Write latency_count file: [latency],[count]
+                let latency_count_path = format!("{}.latency_count", exptid);
+                match File::create(&latency_count_path) {
+                    Ok(mut file) => {
+                        for (latency, count) in buckets.iter() {
+                            writeln!(file, "{},{}", latency, count).expect("Failed to write to latency_count file");
+                        }
+                        eprintln!("Wrote latency_count to {}", latency_count_path);
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to create file {}: {:?}", latency_count_path, e);
+                    }
+                }
+
+                if let Ok(mut file) = File::create(format!("{}.latency", exptid)) {
+                    let mut latencies: Vec<f64> = Vec::new();
+                    let mut counts: Vec<usize> = Vec::new();
+
+                    for (k, v) in buckets.iter() {
+                        latencies.push(*k as f64);
+                        counts.push(*v);
+                    }
+
+                    let total_count: u32 = counts.iter().map(|&count| count as u32).sum();
+                    
+                    
+                    write!(file, "Latencies: \n").expect("Failed to write to file");
+                    let mut cumulative_percentage = 0.0;
+                    for (k, v) in buckets.iter() {
+                        let percentage = (*v as f64 / total_count as f64) * 100.0; // Calculate the percentage
+                        cumulative_percentage += percentage;
+                        write!(file, "{},{},{:.2}\n", k, buckets[k], cumulative_percentage).expect("Failed to write to file");
+                    }
+                    writeln!(file, "").expect("Failed to write to file");
+                    
+                    
+                    let mean: f64 = latencies.iter().zip(counts.iter()).map(|(&l, &c)| l * c as f64).sum::<f64>() / total_count as f64;
+                    let squared_diffs: Vec<f64> = latencies.iter().map(|&x| (x - mean).powi(2)).collect();
+                    let variance: f64 = squared_diffs.iter().sum::<f64>() / total_count as f64;
+                    let standard_deviation: f64 = variance.sqrt();
+                    // let sqdiff = squared_diffs.iter().sum::<f64>();
+                    // writeln!(file, "Total Count: {}", total_count).expect("Failed to write to file");
+                    writeln!(file, "Mean: {:.2}", mean).expect("Failed to write to file");
+                    // writeln!(file, "squared_diffs: {:.2}", sqdiff).expect("Failed to write to file");
+                    // writeln!(file, "variance: {:.2}", variance).expect("Failed to write to file");
+                    writeln!(file, "Standard Deviation: {:.2}", standard_deviation).expect("Failed to write to file");
+
+                } else {
+                    eprintln!("Failed to create file {}.latency", exptid);
+                }
+                return true;
+
+                if let Ok(mut file) = File::create(format!("{}.latency_raw", exptid)) {
+                    for (index, latency) in latencies_raw.iter().enumerate() {
+                        writeln!(file, "{},{}", index, latency)
+                            .expect("Failed to write to file");
+                    }
+                } else {
+                    eprintln!("Failed to create file {}..latency_raw", exptid);
+                }
+            }
+        }
+    }
+
+
+    if let OutputMode::Trace = scheds[0].output {
+        if let Some(exptid) = unsafe {&EXPTID} {
+            if exptid != "null" {
+                let sched_file_path = format!("{}.request_sched", exptid);
+                let mut sched_file = OpenOptions::new()
+                                        .append(true)
+                                        .create(true)
+                                        .open(&sched_file_path)
+                                        .expect("Failed to open file");
+                let lat_file_path = format!("{}.latency_trace", exptid);
+                let mut lat_file = OpenOptions::new()
+                                                .append(true)
+                                                .create(true)
+                                                .open(&lat_file_path)
+                                                .expect("Failed to open file");
+                
+                #[cfg(feature = "server-reply-analysis")]
+                let mut server_reply_file = {
+                    let server_reply_file_path = format!("{}.server_reply", exptid);
+                    OpenOptions::new()
+                        .append(true)
+                        .create(true)
+                        .open(&server_reply_file_path)
+                        .expect("Failed to open file")
+                };
+
+                for p in results.into_iter().filter_map(|p| p.trace).kmerge() {
+                    let target_start = duration_to_ns(p.target_start);
+                    writeln!(sched_file, "{},{}", target_start, p.client_port);
+                    if target_start < 200_000_000{
+                        continue; // discard the first 100ms for warmup
+                    }
+                    if let Some(completion_time) = p.completion_time {
+                        let target_start = duration_to_ns(p.target_start);
+                        let actual_start = duration_to_ns(p.actual_start.unwrap());
+                        let lat_in_us = duration_to_ns(completion_time - p.actual_start.unwrap()) as u64 / 1000;
+                        // unsafe{ LATENCY_TRACE_RESULTS.push((duration_to_ns(actual_start), lat)) };
+                        writeln!(lat_file, "{},{},{},{}", target_start,actual_start, lat_in_us, p.client_port);
+                        
+                        #[cfg(feature = "server-reply-analysis")]
+                        {                            
+                            let ServerMetadata { timestamp, server_port, queue_len, conn_count, response_time_delta } = p.server_metadata.unwrap();
+                            writeln!(server_reply_file, "{target_start},{actual_start},{timestamp},{server_port},{lat_in_us},{queue_len},{conn_count},{response_time_delta}").expect("Failed to write to server_reply_file");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    true
+}
+
+fn process_per_conn_result_final_per_server(
+    results: Vec<ScheduleResult>,
+) -> bool {
+    let mut buckets: BTreeMap<u64, usize> = BTreeMap::new();
+    let mut latencies_raw: Vec<u64> = Vec::new();
+
+    let packet_count = results.iter().map(|res| res.packet_count).sum::<usize>();
+    let drop_count = results.iter().map(|res| res.drop_count).sum::<usize>();
+    let never_sent_count = results
+        .iter()
+        .map(|res| res.never_sent_count)
+        .sum::<usize>();
+    let first_send = results.iter().filter_map(|res| res.first_send).min();
+    let last_send = results.iter().filter_map(|res| res.last_send).max();
+    let last_recv = results.iter().filter_map(|res| res.last_recv).max();
+    let first_tsc = results.iter().filter_map(|res| res.first_tsc).min();
+
+    // let total_pps = scheds.iter().map(|e| e.rps).sum::<usize>();
+
+    if packet_count <= 1 {
+        eprintln!("[2] WARNING: packet_count <= 1");
+        return false;
+    }
+
+    results.iter().for_each(|res| {
+        if *res != Default::default() {
+            for (k, v) in &res.latencies {
+                *buckets.entry(*k).or_insert(0) += v;
+            }
+            for lat in &res.latencies_raw {
+                latencies_raw.push(*lat);
+            }
+        }
+    });
+
+    let percentile = |p| {
+        let idx = ((packet_count + drop_count) as f32 * p / 100.0) as usize;
+        if idx >= packet_count {
+            return INFINITY;
+        }
+
+        let mut seen = 0;
+        for k in buckets.keys() {
+            seen += buckets[k];
+            if seen >= idx {
+                return *k as f32;
+            }
+        }
+        return INFINITY;
+    };
+
+    println!(
+        "Median (us): {: <7}\t99th (us): {: <7}\t99.9th (us): {: <7}",
+        percentile(50.0) as usize,
+        percentile(99.0) as usize,
+        percentile(99.9) as usize
+    );
+    
+
+    eprintln!("\n\n[2] Writing data into files...");
+
+    unsafe {
+        if let Some(exptid) = &EXPTID {
+            if exptid != "null" {
+                if let Ok(mut file) = File::create(format!("{}.latency", exptid)) {
+                    let mut latencies: Vec<f64> = Vec::new();
+                    let mut counts: Vec<usize> = Vec::new();
+
+                    for (k, v) in buckets.iter() {
+                        latencies.push(*k as f64);
+                        counts.push(*v);
+                    }
+
+                    let total_count: u32 = counts.iter().map(|&count| count as u32).sum();
+                    
+                    
+                    write!(file, "Latencies: \n").expect("Failed to write to file");
+                    let mut cumulative_percentage = 0.0;
+                    for (k, v) in buckets.iter() {
+                        let percentage = (*v as f64 / total_count as f64) * 100.0; // Calculate the percentage
+                        cumulative_percentage += percentage;
+                        write!(file, "{},{},{:.2}\n", k, buckets[k], cumulative_percentage).expect("Failed to write to file");
+                    }
+                    writeln!(file, "").expect("Failed to write to file");
+                    
+                    
+                    let mean: f64 = latencies.iter().zip(counts.iter()).map(|(&l, &c)| l * c as f64).sum::<f64>() / total_count as f64;
+                    let squared_diffs: Vec<f64> = latencies.iter().map(|&x| (x - mean).powi(2)).collect();
+                    let variance: f64 = squared_diffs.iter().sum::<f64>() / total_count as f64;
+                    let standard_deviation: f64 = variance.sqrt();
+                    // let sqdiff = squared_diffs.iter().sum::<f64>();
+                    // writeln!(file, "Total Count: {}", total_count).expect("Failed to write to file");
+                    writeln!(file, "Mean: {:.2}", mean).expect("Failed to write to file");
+                    // writeln!(file, "squared_diffs: {:.2}", sqdiff).expect("Failed to write to file");
+                    // writeln!(file, "variance: {:.2}", variance).expect("Failed to write to file");
+                    writeln!(file, "Standard Deviation: {:.2}", standard_deviation).expect("Failed to write to file");
+
+                } else {
+                    eprintln!("Failed to create file {}.latency", exptid);
+                }
+                return true;
+
+                if let Ok(mut file) = File::create(format!("{}.latency_raw", exptid)) {
+                    for (index, latency) in latencies_raw.iter().enumerate() {
+                        writeln!(file, "{},{}", index, latency)
+                            .expect("Failed to write to file");
+                    }
+                } else {
+                    eprintln!("Failed to create file {}..latency_raw", exptid);
+                }
+            }
+        }
+    }
+
+
+    if let Some(exptid) = unsafe {&EXPTID} {
+        if exptid != "null" {
+            let sched_file_path = format!("{}.request_sched", exptid);
+            let mut sched_file = OpenOptions::new()
+                                    .append(true)
+                                    .create(true)
+                                    .open(&sched_file_path)
+                                    .expect("Failed to open file");
+            
+            let lat_file_path = format!("{}.latency_trace", exptid);
+            let mut lat_file = OpenOptions::new()
+                                            .append(true)
+                                            .create(true)
+                                            .open(&lat_file_path)
+                                            .expect("Failed to open file");
+            
+            #[cfg(feature = "server-reply-analysis")]
+            let mut server_reply_file = {
+                let server_reply_file_path = format!("{}.server_reply", exptid);
+                OpenOptions::new()
+                    .append(true)
+                    .create(true)
+                    .open(&server_reply_file_path)
+                    .expect("Failed to open file")
+            };
+
+            for p in results.into_iter().filter_map(|p| p.trace).kmerge() {
+                let target_start = duration_to_ns(p.target_start);
+                writeln!(sched_file, "{},{}", target_start, p.client_port);
+                if target_start < 200_000_000{
+                    continue; // discard the first 100ms for warmup
+                }
+                if let Some(completion_time) = p.completion_time { 
+                    let actual_start = duration_to_ns(p.actual_start.unwrap());
+                    let lat_in_us = duration_to_ns(completion_time - p.actual_start.unwrap()) as u64 / 1000;
+                    // unsafe{ LATENCY_TRACE_RESULTS.push((duration_to_ns(actual_start), lat)) };
+                    writeln!(lat_file, "{},{},{},{}", target_start,actual_start, lat_in_us, p.client_port);
+                    
+                    #[cfg(feature = "server-reply-analysis")]
+                    {                        
+                        let ServerMetadata { timestamp, server_port, queue_len, conn_count, response_time_delta } = p.server_metadata.unwrap();
+                        writeln!(server_reply_file, "{target_start},{actual_start},{timestamp},{server_port},{lat_in_us},{queue_len},{conn_count},{response_time_delta}").expect("Failed to write to server_reply_file");
+                    }
+                }
+            }
+        }
+    }
+    
+
+    true
+}
+
+fn run_per_conn_client_multi_server(
+    proto: Arc<Box<dyn LoadgenProtocol>>,
+    backend: Backend,
+    addrs: &Vec<SocketAddrV4>,
+    nthreads: usize,
+    tport: Transport,
+    barrier_group: &mut Option<lockstep::Group>,
+    schedules: Vec<Arc<Vec<RequestSchedule>>>,
+    index: usize,
+    num_servers: usize,
+) {
+    let wg = shenango::WaitGroup::new();
+
+    wg.add(3 * nthreads as i32);
+    let wg_start = shenango::WaitGroup::new();
+    wg_start.add(1 as i32);
+
+    let conn_threads: Vec<_> = schedules
+        .iter()
+        .enumerate()
+        .map(|(i, schedules)| {
+            let client_idx = num_servers * (100 + (index * nthreads)) + i;
+            let proto: Arc<Box<dyn LoadgenProtocol>> = proto.clone();
+            let wg = wg.clone();
+            let wg_start = wg_start.clone();
+            let schedules = schedules.clone();
+            let addr = addrs[i % addrs.len()];
+            // eprintln!("Client index: {}", client_idx);
+            // for schedule in schedules.iter() {
+            //     eprintln!("{:?}", schedule.rps);
+            // }
+            backend.spawn_thread(move || {
+                run_client_worker(
+                    proto, backend, addr, tport, wg, wg_start, schedules, client_idx, None,
+                )
+            })
+        })
+        .collect();
+    backend.sleep(Duration::from_secs(1));
+    wg.wait();
+
+    if let Some(ref mut g) = *barrier_group {
+        g.barrier();
+    }
+
+    wg_start.done();
+    let packets: Vec<Vec<Option<ScheduleResult>>> = conn_threads
+        .into_iter()
+        .map(|s| s.join().unwrap())
+        .collect();
+
+    let results: Vec<ScheduleResult> = packets.into_iter()
+        .flatten() // Flatten the Vec<Vec<Option<ScheduleResult>>> to Vec<Option<ScheduleResult>>
+        .map(|packet| packet.unwrap_or_default()) // Convert Option<ScheduleResult> to ScheduleResult
+        .collect(); // Collect into Vec<ScheduleResult>
+    process_per_conn_result_final_per_server(results);
+}
+
+
+fn run_per_conn_client(
+    total_ppss: Vec<usize>,
+    proto: Arc<Box<dyn LoadgenProtocol>>,
+    backend: Backend,
+    addrs: &Vec<SocketAddrV4>,
+    nthreads: usize,
+    tport: Transport,
+    barrier_group: &mut Option<lockstep::Group>,
+    schedules: Vec<Arc<Vec<RequestSchedule>>>,
+    index: usize,
+) -> bool {
+    let wg = shenango::WaitGroup::new();
+
+    wg.add(3 * nthreads as i32);
+    let wg_start = shenango::WaitGroup::new();
+    wg_start.add(1 as i32);
+
+    let conn_threads: Vec<_> = schedules
+        .iter()
+        .enumerate()
+        .map(|(i, schedules)| {
+            let client_idx = 100 + (index * nthreads) + i;
+            let proto = proto.clone();
+            let wg = wg.clone();
+            let wg_start = wg_start.clone();
+            let schedules = schedules.clone();
+            let addr = addrs[i % addrs.len()];
+
+            backend.spawn_thread(move || {
+                run_client_worker(
+                    proto, backend, addr, tport, wg, wg_start, schedules, client_idx, None,
+                )
+            })
+        })
+        .collect();
+    
+    backend.sleep(Duration::from_secs(1));
+    wg.wait();
+
+
+    if let Some(ref mut g) = *barrier_group {
+        g.barrier();
+    }
+
+    wg_start.done();
+    let start_unix = SystemTime::now();
+
+    let packets: Vec<Vec<Option<ScheduleResult>>> = conn_threads
+        .into_iter()
+        .map(|s| s.join().unwrap())
+        .collect();
+
+    let sched_start = Duration::from_nanos(100_000_000);
+
+    let results = schedules.into_iter()
+        .zip(packets.into_iter())
+        .map(|(schedules, packets)| {
+            let mut sched_start = sched_start;
+            schedules.iter()
+                .zip(packets.into_iter())
+                .filter_map(|(sched, packet)| {
+                    let old_sched_start = sched_start;
+                    sched_start += sched.runtime;
+                    if let OutputMode::Silent = sched.output { None }
+                    else { Some((*sched, packet.unwrap_or_default(), old_sched_start)) }
+                })
+                .collect_vec()
+        })
+        .collect_vec();
+
+    /* let results = schedules.iter()
+        .zip(packets.into_iter())
+        .filter_map(|(schedules, packets)| {
+            let last = packets.into_iter().last();
+            if last.is_none() || last.as_ref().unwrap().is_none() { return None }
+            let last = last.unwrap().unwrap();
+
+            let sched = schedules[schedules.len() - 1];
+            let sched_start = schedules.iter().fold(sched_start, |sum, e| sum + e.runtime) - sched.runtime;
+
+            Some((sched, last, sched_start))
+        })
+        .collect_vec(); */
+
+    assert!(results.iter().fold(true, |acc, e| acc && e.len() == results[0].len()));
+
+    let runs = results[0].len();
+    let results = results.into_iter()
+        .fold(
+            vec![vec![]; runs],
+            |mut acc, e| {
+                e.into_iter().enumerate()
+                    .for_each(|(i, e)| acc[i].push(e));
+                acc
+            }
+        );
+
+    let mut ret = true;
+    for (results, total_pps) in results.into_iter().zip(total_ppss) {
+        // ret = results.iter()
+        //     .map(|(sched, last, sched_start)| {
+        //         process_result_final(sched, vec![last.clone()], start_unix, *sched_start)
+        //     })
+        //     .collect_vec()
+        //     .into_iter()
+        //     .all(|p| p) && ret;
+
+        let (scheds, results, sched_starts) = results.into_iter()
+            .fold(
+                (vec![], vec![], vec![]),
+                |(mut a, mut b, mut c), (ai, bi, ci)| {
+                    a.push(ai);
+                    b.push(bi);
+                    c.push(ci);
+                    (a, b, c)
+                }
+            );
+
+        let sched_start = sched_starts.into_iter().min().unwrap();
+
+        ret = process_per_conn_result_final(total_pps, scheds, results, start_unix, sched_start) && ret;
+        // eprintln!("\n*******************************************\n");
+    }
+
+    ret
+    /* schedules
+        .iter()
+        .zip(packets.into_iter())
+        .map(|(schedules, packets)| {
+            schedules
+                .iter()
+                .zip(packets.into_iter())
+                .map(|(sched, packet)| {
+                    let perthread = if packet.is_some() { vec![packet.unwrap()] } else { vec![] };
+                    let r = process_result_final(sched, perthread, start_unix, sched_start);
+                    sched_start += sched.runtime;
+                    r
+                })
+                .collect_vec()
+                .into_iter()
+                .all(|p| p)
+        })
+        .collect_vec()
+        .into_iter()
+        .all(|p| p) */
+}
+
+fn write_latency_trace_results() {
+    let mut cnt_map: HashMap<u64, u64> = HashMap::new();
+    let mut sum_lat_map: HashMap<u64, u64> = HashMap::new();
+    
+    for (ms, lat) in unsafe{ &LATENCY_TRACE_RESULTS } {
+        let count = unsafe{ cnt_map.entry(*ms).or_insert(0) };
+        *count += 1;
+
+        let sum_lat = unsafe{ sum_lat_map.entry(*ms).or_insert(0) };
+        *sum_lat += lat;
+    }
+
+    let mut avg_lat_map: HashMap<u64, u64> = HashMap::new();
+    for (ms, count) in &cnt_map {
+        if let Some(&sum_lat) = sum_lat_map.get(ms) {
+            let avg_lat = sum_lat / *count;
+            avg_lat_map.insert(*ms, avg_lat);
+        }
+    }
+    // Convert avg_lat_map into a BTreeMap for sorting by keys
+    let sorted_avg_lat_map: BTreeMap<u64, u64> = avg_lat_map.into_iter().collect();
+    
+    if let Some(exptid) = unsafe {&EXPTID} {
+        if exptid != "null" {
+            let file_path = format!("{}.latency_trace", exptid);
+            // Open the file in append mode using OpenOptions
+            if let Ok(mut file) = OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(&file_path) 
+            {
+                for (ms, avg_lat) in sorted_avg_lat_map.iter() {
+                    writeln!(file, "{},{}", ms, avg_lat).expect("Failed to write to file");
+                }
+            }
+        }
+        else {
+            // Iterate and print the elements in ascending order of keys
+            for (ms, avg_lat) in sorted_avg_lat_map.iter() {
+                println!("{},{}", ms, avg_lat);
+            }
+        }
+    }
+    
+
+    println!("");
+}
+
+fn main() {
+    let matches = App::new("Synthetic Workload Application")
+        .version("0.1")
+        .arg(
+            Arg::with_name("exptid")
+                .long("exptid")
+                .value_name("ID")
+                .default_value("null")
+                .help("Experiment ID"),
+        )
+        .arg(
+            Arg::with_name("ADDR")
+                .index(1)
+                .multiple(true)
+                .help("Address and port to listen on")
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("threads")
+                .short("t")
+                .long("threads")
+                .value_name("T")
+                .default_value("1")
+                .help("Number of client threads"),
+        )
+        .arg(
+            Arg::with_name("discard_pct")
+                .long("discard_pct")
+                .default_value("10")
+                .help("Discard first % of packtets at target QPS from sample"),
+        )
+        .arg(
+            Arg::with_name("mode")
+                .short("m")
+                .long("mode")
+                .value_name("MODE")
+                .possible_values(&[
+                    "linux-server",
+                    "linux-client",
+                    "runtime-client",
+                    "spawner-server",
+                    "local-client",
+                ])
+                .required(true)
+                .requires_ifs(&[("runtime-client", "config"), ("spawner-server", "config")])
+                .help("Which mode to run in"),
+        )
+        .arg(
+            Arg::with_name("runtime")
+                .short("r")
+                .long("runtime")
+                .takes_value(true)
+                .default_value("10")
+                .help("How long the application should run for"),
+        )
+        .arg(
+            Arg::with_name("pps")
+                .long("pps")
+                .takes_value(true)
+                .default_value("10000")
+                .help("How many packets should be sent per second"),
+        )
+        .arg(
+            Arg::with_name("start_pps")
+                .long("start_pps")
+                .takes_value(true)
+                .default_value("0")
+                .help("Initial rate to sample at"),
+        )
+        .arg(
+            Arg::with_name("config")
+                .short("c")
+                .long("config")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("protocol")
+                .short("p")
+                .long("protocol")
+                .value_name("PROTOCOL")
+                .possible_values(&["synthetic", "memcached", "dns", "reflex", "http", "resp"])
+                .default_value("synthetic")
+                .help("Server protocol"),
+        )
+        .arg(
+            Arg::with_name("warmup")
+                .long("warmup")
+                .takes_value(false)
+                .help("Run the warmup routine"),
+        )
+        .arg(
+            Arg::with_name("calibrate")
+                .long("calibrate")
+                .takes_value(true)
+                .help("us to calibrate fake work for"),
+        )
+        .arg(
+            Arg::with_name("output")
+                .short("o")
+                .long("output")
+                .value_name("output mode")
+                .possible_values(&["silent", "normal", "buckets", "trace"])
+                .default_value("normal")
+                .help("How to display loadgen results"),
+        )
+        .arg(
+            Arg::with_name("distspec")
+                .long("distspec")
+                .takes_value(true)
+                .help("Distribution of request lengths to use, new format")
+                .conflicts_with("distribution")
+                .conflicts_with("mean"),
+        )
+        .arg(
+            Arg::with_name("distribution")
+                .long("distribution")
+                .short("d")
+                .takes_value(true)
+                .possible_values(&[
+                    "zero",
+                    "constant",
+                    "exponential",
+                    "bimodal1",
+                    "bimodal2",
+                    "bimodal3",
+                ])
+                .default_value("zero")
+                .help("Distribution of request lengths to use"),
+        )
+        .arg(
+            Arg::with_name("mean")
+                .long("mean")
+                .takes_value(true)
+                .default_value("167")
+                .help("Mean number of work iterations per request"),
+        )
+        .arg(
+            Arg::with_name("leader-ip")
+                .long("leader-ip")
+                .takes_value(true)
+                .help("IP address of leader instance")
+                .conflicts_with("leader"),
+        )
+        .arg(
+            Arg::with_name("barrier-peers")
+                .long("barrier-peers")
+                .takes_value(true)
+                .requires("leader")
+                .help("Number of connected loadgen instances"),
+        )
+        .arg(
+            Arg::with_name("leader")
+                .long("leader")
+                .requires("barrier-peers")
+                .takes_value(false)
+                .help("Leader of barrier group"),
+        )
+        .arg(
+            Arg::with_name("samples")
+                .long("samples")
+                .takes_value(true)
+                .default_value("20")
+                .help("Number of samples to collect"),
+        )
+        .arg(
+            Arg::with_name("fakework")
+                .long("fakework")
+                .takes_value(true)
+                .default_value("stridedmem:1024:7")
+                .help("fake worker spec"),
+        )
+        .arg(
+            Arg::with_name("transport")
+                .long("transport")
+                .takes_value(true)
+                .default_value("udp")
+                .help("udp or tcp"),
+        )
+        .arg(
+            Arg::with_name("rampup")
+                .long("rampup")
+                .takes_value(true)
+                .default_value("4")
+                .help("per-sample ramp up seconds"),
+        )
+        .arg(
+            Arg::with_name("loadshift")
+                .long("loadshift")
+                .takes_value(true)
+                .default_value("")
+                .help("loadshift spec"),
+        )
+        .arg(
+            Arg::with_name("partial_uniform")
+                .long("partial_uniform")
+                .takes_value(true)
+                .default_value("")
+                .help("partial uniform spec"),
+        )
+        .arg(
+            Arg::with_name("live")
+                .long("live")
+                .takes_value(false)
+                .help("run live mode"),
+        )
+        .arg(
+            Arg::with_name("intersample_sleep")
+                .long("intersample_sleep")
+                .takes_value(true)
+                .default_value("0")
+                .help("seconds to sleep between samples"),
+        )
+        .arg(
+            Arg::with_name("zipf")
+                .long("zipf")
+                .takes_value(true)
+                .help("enable ZIPF distribution for PPS over threads"),
+        )
+        .arg(
+            Arg::with_name("onoff")
+                .long("onoff")
+                .takes_value(true)
+                .default_value("0")
+                .help("enable on/off pattern of requests"),
+        )
+        .arg(
+            Arg::with_name("shortflow")
+                .long("shortflow")
+                .takes_value(false)
+                .help("Enable short-flow mode: each connection sends one request, then reconnects"),
+        )
+        .arg(
+            Arg::with_name("shortflow-duration")
+                .long("shortflow-duration")
+                .takes_value(true)
+                .help("Duration of each shortflow connection in microseconds (required when --shortflow is used)"),
+        )
+        .arg(
+            Arg::with_name("per-conn-workload")
+                .long("per-conn-workload")
+                .takes_value(true)
+                .help("Per-connection RPS distribution, e.g., '1,2,3,4,5' creates 5 connections with 1,2,3,4,5 RPS respectively"),
+        )
+        .args(&SyntheticProtocol::args())
+        .args(&MemcachedProtocol::args())
+        .args(&DnsProtocol::args())
+        .args(&ReflexProtocol::args())
+        .args(&HttpProtocol::args())
+        .args(&RespProtocol::args())
+        .get_matches();
+
+    let exptid = matches.value_of("exptid").unwrap_or("null").to_string();
+    let onoff = matches.value_of("onoff").unwrap_or("0").to_string();
+    
+    unsafe {
+        EXPTID = Some(exptid.clone());
+        ONOFF = Some(onoff.clone());
+    }
+
+    if let Some(onoff) = unsafe{ &ONOFF } {
+        if onoff == "1" {
+            eprintln!("Running with On/Off pattern");
+        }else {
+            eprintln!("Running w/o On/Off pattern");
+        }
+    }
+    let addrs: Vec<SocketAddrV4> = matches
+        .values_of("ADDR")
+        .unwrap()
+        .map(|val| FromStr::from_str(val).unwrap())
+        .collect();
+    let nthreads = value_t_or_exit!(matches, "threads", usize);
+    let discard_pct = value_t_or_exit!(matches, "discard_pct", f32);
+
+    let runtime = Duration::from_secs(value_t!(matches, "runtime", u64).unwrap());
+    let packets_per_second = (value_t_or_exit!(matches, "pps", f32)) as usize;
+    let start_packets_per_second = (value_t_or_exit!(matches, "start_pps", f32)) as usize;
+    assert!(start_packets_per_second <= packets_per_second);
+    let config = matches.value_of("config");
+    let dowarmup = matches.is_present("warmup");
+    let live_mode = matches.is_present("live");
+
+    let distspec = match matches.is_present("distspec") {
+        true => value_t_or_exit!(matches, "distspec", String),
+        false => {
+            let mean = value_t_or_exit!(matches, "mean", f64);
+            match matches.value_of("distribution").unwrap() {
+                "zero" => "zero".to_string(),
+                "constant" => format!("constant:{}", mean),
+                "exponential" => format!("exponential:{}", mean),
+                "bimodal1" => format!("bimodal:0.9:{}:{}", mean * 0.5, mean * 5.5),
+                "bimodal2" => format!("bimodal:0.999:{}:{}", mean * 0.5, mean * 500.5),
+                "bimodal3" => format!("bimodal:0.99:{}:{}", mean * 0.5, mean * 5.5),
+                _ => unreachable!(),
+            }
+        }
+    };
+    let distribution = Distribution::create(&distspec).unwrap();
+    let tport = value_t_or_exit!(matches, "transport", Transport);
+    let proto: Arc<Box<dyn LoadgenProtocol>> = match matches.value_of("protocol").unwrap() {
+        "synthetic" => Arc::new(Box::new(SyntheticProtocol::with_args(&matches, tport))),
+        "memcached" => Arc::new(Box::new(MemcachedProtocol::with_args(&matches, tport))),
+        "dns" => Arc::new(Box::new(DnsProtocol::with_args(&matches, tport))),
+        "reflex" => Arc::new(Box::new(ReflexProtocol::with_args(
+            &matches,
+            tport,
+            distribution,
+        ))),
+        "http" => Arc::new(Box::new(HttpProtocol::with_args(&matches, tport))),
+        "resp" => Arc::new(Box::new(RespProtocol::with_args(&matches, tport))),
+        _ => unreachable!(),
+    };
+
+    let intersample_sleep = value_t_or_exit!(matches, "intersample_sleep", u64);
+    let output = value_t_or_exit!(matches, "output", OutputMode);
+    let samples = value_t_or_exit!(matches, "samples", usize);
+    let rampup = value_t_or_exit!(matches, "rampup", usize);
+    let mode = matches.value_of("mode").unwrap();
+    let backend = match mode {
+        "linux-server" | "linux-client" => Backend::Linux,
+        "spawner-server" | "runtime-client" | "local-client" => Backend::Runtime,
+        _ => unreachable!(),
+    };
+
+    let loadshift_spec = value_t_or_exit!(matches, "loadshift", String);
+    let partial_uniform_spec = value_t_or_exit!(matches, "partial_uniform", String);
+    let fwspec = value_t_or_exit!(matches, "fakework", String);
+    let fakeworker = Arc::new(FakeWorker::create(&fwspec).unwrap());
+
+    if matches.is_present("calibrate") {
+        let us = value_t_or_exit!(matches, "calibrate", u64);
+        backend.init_and_run(config, move || {
+            let barrier = Arc::new(AtomicUsize::new(nthreads));
+            let join_handles: Vec<_> = (0..nthreads)
+                .map(|_| {
+                    let fakeworker = fakeworker.clone();
+                    let barrier = barrier.clone();
+                    backend.spawn_thread(move || {
+                        barrier.fetch_sub(1, Ordering::SeqCst);
+                        while barrier.load(Ordering::SeqCst) > 0 {}
+                        fakeworker.calibrate(us);
+                    })
+                })
+                .collect();
+            for j in join_handles {
+                j.join().unwrap();
+            }
+        });
+        return;
+    }
+
+    let zipf = if matches.is_present("shortflow") {
+        // Ignore zipf parameter in shortflow mode
+        None
+    } else {
+        matches.value_of("zipf")
+            .map(|alpha| alpha.parse::<f64>().unwrap())
+            .filter(|&alpha| if nthreads == 1 {
+                panic!("ZIPF distribution was selected with only 1 thread.");
+                false
+            }
+            // else if alpha == 0.0 {
+            //     panic!("Alpha = 0 is a uniform distribution.");
+            //     false
+            // }
+            else {
+                true
+            })
+    };
+
+    match mode {
+        "spawner-server" => match tport {
+            Transport::Udp => {
+                backend.init_and_run(config, move || run_spawner_server(addrs[0], &fwspec))
+            }
+            Transport::Tcp => backend.init_and_run(config, move || {
+                run_tcp_server(backend, addrs[0], fakeworker)
+            }),
+        },
+        "linux-server" => match tport {
+            Transport::Udp => backend.init_and_run(config, move || {
+                run_linux_udp_server(backend, addrs[0], nthreads, fakeworker)
+            }),
+            Transport::Tcp => backend.init_and_run(config, move || {
+                run_tcp_server(backend, addrs[0], fakeworker)
+            }),
+        },
+        "local-client" => {
+            backend.init_and_run(config, move || {
+                println!("Distribution, RPS, Target, Actual, Dropped, Never Sent, Median, 90th, 99th, 99.9th, 99.99th, Start, StartTsc");
+                if dowarmup {
+                    for packets_per_second in (1..3).map(|i| i * 100000) {
+                        let sched = gen_classic_packet_schedule(
+                            Duration::from_secs(1),
+                            packets_per_second,
+                            OutputMode::Silent,
+                            distribution,
+                            0,
+                            nthreads,
+                            discard_pct,
+                        );
+                        run_local(
+                            backend,
+                            nthreads,
+                            fakeworker.clone(),
+                            sched,
+                        );
+                    }
+                }
+                let step_size = (packets_per_second - start_packets_per_second) / samples;
+                for j in 1..=samples {
+                    let sched = gen_classic_packet_schedule(
+                        runtime,
+                        start_packets_per_second + step_size * j,
+                        output,
+                        distribution,
+                        0,
+                        nthreads,
+                        discard_pct,
+                    );
+                    run_local(
+                        backend,
+                        nthreads,
+                        fakeworker.clone(),
+                        sched,
+                    );
+                    backend.sleep(Duration::from_secs(3));
+                }
+            });
+        }
+        "linux-client" | "runtime-client" => {
+            let matches = matches.clone();
+            backend.init_and_run(config, move || {
+
+                let mut barrier_group = match (matches.is_present("leader"), matches.value_of("leader-ip")) {
+                    (true, _) => {
+                        let addr =  SocketAddrV4::new(FromStr::from_str("0.0.0.0").unwrap(), 23232);
+                        let npeers = value_t_or_exit!(matches, "barrier-peers", usize);
+                        Some(lockstep::Group::new_server(npeers - 1, addr, backend.clone()).unwrap())
+                    },
+                    (_, Some(ipstr)) => {
+                        let addr = SocketAddrV4::new(FromStr::from_str(ipstr).unwrap(), 23232);
+                        Some(lockstep::Group::new_client(addr, backend.clone()).unwrap())
+                    }
+                    (_, _) => None,
+                };
+
+                if !live_mode {
+                    // println!("Distribution, RPS, Target, Actual, Dropped, Never Sent, Median, 90th, 99th, 99.9th, 99.99th, Start, StartTsc");
+                    println!("RPS, Actual, Dropped, Never Sent, Median, 90th, 99th, 99.9th, 99.99th");
+                }
+                match (matches.value_of("protocol").unwrap(), &barrier_group) {
+                    (_, Some(lockstep::Group::Client(ref _c))) => (),
+                    ("memcached", _) => {
+                        let proto = MemcachedProtocol::with_args(&matches, Transport::Tcp);
+                        for addr in &addrs {
+                            if !run_memcached_preload(proto, backend, Transport::Tcp, *addr, nthreads) {
+                                panic!("Could not preload memcached");
+                            }
+                        }
+
+                    },
+                    ("resp", _) => {
+                        let protocol = RespProtocol::with_args(&matches, Transport::Tcp);
+                        protocol.preload_servers(backend, Transport::Tcp, addrs[0]);
+                    }
+                    _ => (),
+                };
+                if matches.is_present("shortflow") {
+                    let shortflow_duration_us = matches
+                        .value_of("shortflow-duration")
+                        .expect("--shortflow-duration is required when using --shortflow")
+                        .parse::<u64>()
+                        .expect("--shortflow-duration must be a valid integer (microseconds)");
+                    run_shortflow_client(
+                        proto,
+                        backend,
+                        &addrs,
+                        nthreads,
+                        tport,
+                        &mut barrier_group,
+                        runtime,
+                        shortflow_duration_us,
+                    );
+                    return;
+                }
+
+                // Per-connection workload mode: --per-conn-workload=1,2,3,4,5
+                if let Some(per_conn_spec) = matches.value_of("per-conn-workload") {
+                    let rps_list: Vec<f64> = per_conn_spec
+                        .split(",")
+                        .map(|s| s.trim().parse::<f64>().expect("Invalid RPS value in --per-conn-workload"))
+                        .collect();
+
+                    let num_conns = rps_list.len();
+
+                    if num_conns != nthreads {
+                        panic!(
+                            "--per-conn-workload specifies {} connections, but --nthreads is {}. They must match.",
+                            num_conns, nthreads
+                        );
+                    }
+
+                    let total_pps: usize = rps_list.iter().map(|&r| r as usize).sum();
+                    let max_rps = rps_list.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+                    let min_rps = rps_list.iter().cloned().fold(f64::INFINITY, f64::min);
+
+                    // eprintln!("[per-conn-workload] {} connections, RPS range: [{:.0} ~ {:.0}], total: {} RPS", num_conns, max_rps, min_rps, total_pps);
+
+                    let schedules: Vec<Arc<Vec<RequestSchedule>>> = rps_list
+                        .iter()
+                        .map(|&pps| {
+                            let pps = if pps < 1.0 { 1.0 } else { pps };
+                            Arc::new(gen_single_conn_schedule(
+                                runtime,
+                                pps,
+                                output,
+                                distribution,
+                                rampup,
+                                discard_pct,
+                            ))
+                        })
+                        .collect();
+
+                    run_per_conn_client(
+                        vec![total_pps],
+                        proto,
+                        backend,
+                        &addrs,
+                        num_conns,
+                        tport,
+                        &mut barrier_group,
+                        schedules,
+                        1,
+                    );
+
+                    if let Some(ref mut g) = barrier_group {
+                        g.barrier();
+                    }
+                    return;
+                }
+
+                if live_mode {
+                    let sched = gen_classic_packet_schedule(
+                        runtime,
+                        packets_per_second,
+                        OutputMode::Live,
+                        distribution,
+                        rampup,
+                        nthreads,
+                        discard_pct
+                    );
+                    run_live_client(proto, backend, &addrs, nthreads, tport, &mut barrier_group, sched);
+                    unreachable!();
+                }
+
+                if !loadshift_spec.is_empty() {
+                    if let Some(alpha) = zipf { 
+                        // let (mut schedules, ppss) = zipf_gen_loadshift_experiment(&loadshift_spec, distribution, nthreads, alpha, output);
+                        // for schedule_vec in &schedules {
+                        //     for schedule in schedule_vec {
+                        //         eprintln!("{:?}", schedule.arrival);
+                        //     }
+                        //     eprint!("\n\n");
+                        // }
+                        let num_servers = loadshift_spec.as_str().matches('/').count() + 1;
+                        assert!(nthreads % num_servers == 0);
+                        let mut schedules = zipf_gen_per_server_loadshift_experiment(&loadshift_spec, distribution, nthreads, alpha, output, num_servers);
+                        // for schedule_vec in &schedules {
+                        //     for schedule in schedule_vec {
+                        //         eprintln!("{:?}, {:?}", schedule.rps, schedule.runtime);
+                        //     }
+                        //     eprint!("\n\n");
+                        // }
+                        let schedules = schedules.into_iter().map(|e| Arc::new(e)).collect();
+                        run_per_conn_client_multi_server(
+                            proto,
+                            backend,
+                            &addrs,
+                            nthreads,
+                            tport,
+                            &mut barrier_group,
+                            schedules,
+                            1,
+                            num_servers,
+                        );
+                    } else {
+                        let sched = gen_loadshift_experiment(&loadshift_spec, distribution, nthreads, output);
+                        run_client(
+                            proto,
+                            backend,
+                            &addrs,
+                            nthreads,
+                            tport,
+                            &mut barrier_group,
+                            sched,
+                            1,
+                        );
+                    }
+                    // write_latency_trace_results();
+                    if let Some(ref mut g) = barrier_group {
+                        g.barrier();
+                    }
+                    return;
+                }
+
+                if !partial_uniform_spec.is_empty() {
+                    let mut schedules = gen_partial_uniform_experiment(packets_per_second, &partial_uniform_spec, distribution, nthreads, output);
+                    // for schedule_vec in &schedules {
+                    //     for schedule in schedule_vec {
+                    //         eprintln!("{:?}, {:?}", schedule.rps, schedule.runtime);
+                    //     }
+                    //     eprint!("\n\n");
+                    // }
+                    let schedules = schedules.into_iter().map(|e| Arc::new(e)).collect();
+                    run_per_conn_client_multi_server(
+                        proto,
+                        backend,
+                        &addrs,
+                        nthreads,
+                        tport,
+                        &mut barrier_group,
+                        schedules,
+                        1,
+                        1,
+                    );
+                    
+                    // write_latency_trace_results();
+                    if let Some(ref mut g) = barrier_group {
+                        g.barrier();
+                    }
+                    return;
+                }
+
+                if dowarmup {
+                    // Run at full pps 3 times for 20 seconds
+                    for _ in 0..1 {
+                    let sched = gen_classic_packet_schedule(
+                        Duration::from_secs(1),
+                        (0.75 * (packets_per_second as f64)) as usize,
+                        OutputMode::Silent,
+                        distribution,
+                        20,
+                        nthreads,
+                        discard_pct,
+                    );
+                        run_client(
+                            proto.clone(),
+                            backend,
+                            &addrs,
+                            nthreads,
+                            tport,
+                            &mut barrier_group,
+                            sched,
+                            1,
+                        );
+                    }
+                    backend.sleep(Duration::from_secs(intersample_sleep));
+                }
+
+                if let Some(alpha) = zipf {
+                    let pps_distribution = get_zipf_distribution(packets_per_second, alpha, nthreads);
+                    eprintln!("\n");
+                    let schedules = pps_distribution.map(|mut pps| {
+                        if pps < 1.0 {
+                            pps = 1.0;
+                        }
+                        // eprintln!("pps: {}      //", pps);
+                        Arc::new(gen_single_conn_schedule(
+                            runtime,
+                            pps,
+                            output,
+                            distribution,
+                            rampup,
+                            discard_pct
+                        ))
+                    }).collect_vec();
+                    eprintln!("\n");
+                    run_per_conn_client(
+                        vec![packets_per_second],
+                        proto,
+                        backend,
+                        &addrs,
+                        nthreads,
+                        tport,
+                        &mut barrier_group,
+                        schedules,
+                        1
+                    );
+                    
+                    // write_latency_trace_results();
+
+                    if let Some(ref mut g) = barrier_group {
+                        g.barrier();
+                    }
+                    return;
+                }
+
+                let step_size = (packets_per_second - start_packets_per_second) / samples;
+                for j in 1..=samples {
+                    let sched = gen_classic_packet_schedule(
+                        runtime,
+                        start_packets_per_second + step_size * j,
+                        output,
+                        distribution,
+                        rampup,
+                        nthreads,
+                        discard_pct
+                    );
+                    if !run_client(
+                        proto.clone(),
+                        backend,
+                        &addrs,
+                        nthreads,
+                        tport,
+                        &mut barrier_group,
+                        sched,
+                        j,
+                    ) { break; }
+                    if j != samples { backend.sleep(Duration::from_secs(intersample_sleep)); }
+                }
+                // write_latency_trace_results();
+                if let Some(ref mut g) = barrier_group {
+                    g.barrier();
+                }
+            });
+        }
+        _ => unreachable!(),
+    };
+}

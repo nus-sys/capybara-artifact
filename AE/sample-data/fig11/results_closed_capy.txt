@@ -1,0 +1,16 @@
+RES capy closed NB=2 c=30 rps=40817.05 gbps=39.84 p99=9.13ms errlines=1
+RES capy closed NB=2 c=50 rps=40808.57 gbps=39.84 p99=4.84ms errlines=0
+RES capy closed NB=2 c=70 rps=35057.99 gbps=34.24 p99=1.43ms errlines=0
+RES capy closed NB=2 c=100 rps=40201.82 gbps=39.28 p99=14.89ms errlines=1
+RES capy closed NB=4 c=50 rps=58149.97 gbps=56.8 p99=2.83ms errlines=0
+RES capy closed NB=4 c=70 rps=67134.13 gbps=65.6 p99=4.43ms errlines=0
+RES capy closed NB=4 c=100 rps=94672.53 gbps=92.48 p99=1.41ms errlines=1
+RES capy closed NB=4 c=150 rps=95073.74 gbps=92.88 p99=16.37ms errlines=1
+RES capy closed NB=2 c=40 rps=32277.23 gbps=31.52 p99=0.95ms errlines=1
+RES capy closed NB=2 c=60 rps=32698.39 gbps=31.92 p99=1.15ms errlines=1
+RES capy closed NB=2 c=80 rps=32239.45 gbps=31.52 p99=2.48ms errlines=1
+RES capy closed NB=2 c=30 rps=32642.32 gbps=31.92 p99=489.90ms errlines=1
+RES capy closed NB=2 c=50 rps=40669.58 gbps=39.76 p99=25.29ms errlines=1
+RES capy closed NB=4 c=100 rps=94723.72 gbps=92.56 p99=44.24ms errlines=1
+RES capy closed NB=2 c=50 SANITY-FAIL
+RES capy closed NB=1 c=50 rps=33865.27 gbps=33.12 p99=49.04ms errlines=1

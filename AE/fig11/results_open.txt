@@ -1,0 +1,78 @@
+RES open proxy-nb1 pps=7500 CLIENT-DIED rc=134
+RES open proxy-nb1 pps=10000 CLIENT-DIED rc=134
+RES open proxy-nb1 pps=12500 CLIENT-DIED rc=134
+RES open proxy-nb1 pps=15000 CLIENT-DIED rc=134
+RES open proxy-nb1 pps=10000 CLIENT-DIED rc=134
+RES open proxy-nb1 pps=12500 CLIENT-DIED rc=134
+RES open proxy-nb1 pps=15000 CLIENT-DIED rc=134
+RES open capy-nb1 pps=15000 achieved=14626 gbps=15.336 detail=15000, 14626, 0, 35, 46.0, 98.0, 166.0, 234.0, 293.0
+RES open capy-nb1 pps=17500 CLIENT-DIED rc=134
+RES open capy-nb1 pps=20000 CLIENT-DIED rc=134
+RES open capy-nb1 pps=17500 achieved=17058 gbps=17.887 detail=17500, 17058, 0, 68, 54.0, 116.0, 198.0, 295.0, 379.0
+RES open capy-nb2 pps=33000 achieved=0 gbps=0.0 detail=33000, 0, 0, 0, NA, NA, NA, NA, NA
+RES open capy-nb2 pps=20000 CLIENT-DIED rc=134
+RES open capy-nb2 pps=25000 CLIENT-DIED rc=134
+RES open capy-nb2 pps=33000 CLIENT-DIED rc=134
+RES open capy-nb2 pps=33000 SANITY-FAIL
+RES open capy-nb1 pps=17500 achieved=17057 gbps=17.886 detail=17500, 17057, 0, 77, 60.0, 124.0, 210.0, 300.0, 382.0
+RES open capy-nb2 pps=33000 SANITY-FAIL
+RES open capy-nb2 pps=33000 achieved=17251 gbps=18.089 detail=33000, 17251, 0, 74, 50.0, 108.0, 185.0, 269.0, 343.0
+RES open capy-nb2 pps=33000 achieved=32467 gbps=34.044 detail=33000, 32467, 0, 275, 71.0, 195.0, 532.0, 1585.0, 2562.0
+RES open capy-nb2 pps=33000 achieved=0 gbps=0.0 detail=33000, 0, 0, 0, NA, NA, NA, NA, NA
+RES open capy-nb2 pps=5000 achieved=3180 gbps=3.334 detail=5000, 3180, 14933, 6, 44.0, inf, inf, inf, inf
+RES open capy-nb2 pps=15000 achieved=6806 gbps=7.137 detail=15000, 6806, 0, 17, 41.0, 63.0, 96.0, 129.0, 156.0
+RES open capy-nb2 pps=15000 achieved=0 gbps=0.0 detail=15000, 0, 0, 0, NA, NA, NA, NA, NA
+RES open capy-nb2dbg pps=2000 CLIENT-DIED rc=134
+RES open capy-nb2 pps=33000 achieved=0 gbps=0.0 detail=33000, 0, 0, 0, NA, NA, NA, NA, NA
+RES open capy-nb2 pps=33000 CLIENT-DIED rc=134
+RES open capy-nb2 pps=15000 achieved=0 gbps=0.0 detail=15000, 0, 0, 0, NA, NA, NA, NA, NA
+RES open capy-nb2 pps=8000 SANITY-FAIL
+RES open capy-nb2 pps=12000 SANITY-FAIL
+RES open probe-a pps=2000 achieved=1095 gbps=1.148 detail=2000, 1095, 0, 0, 39.0, 42.0, 63.0, 69.0, 88.0
+RES open probe-b pps=15000 CLIENT-DIED rc=134
+RES open probe-t30 pps=6000 achieved=2938 gbps=3.081 detail=6000, 2938, 0, 1, 39.0, 42.0, 67.0, 91.0, 113.0
+RES open probe-t10 pps=3000 achieved=2976 gbps=3.121 detail=3000, 2976, 0, 1, 39.0, 42.0, 67.0, 92.0, 105.0
+RES open probe-dbg30 pps=6000 achieved=5885 gbps=6.171 detail=6000, 5885, 0, 2, 66.0, 262.0, 1068.0, 1954.0, 2672.0
+RES open capy-nb2 pps=6000 achieved=2662 gbps=2.791 detail=6000, 2662, 0, 3, 39.0, 42.0, 67.0, 91.0, 146.0
+RES open capy-nb2 pps=6000 achieved=2080 gbps=2.181 detail=6000, 2080, 0, 2, 40.0, 43.0, 69.0, 95.0, 118.0
+RES open capy-nb2 pps=15000 achieved=7047 gbps=7.389 detail=15000, 7047, 0, 6, 40.0, 63.0, 93.0, 124.0, 150.0
+RES open capy-nb2 pps=6000 achieved=5885 gbps=6.171 detail=6000, 5885, 0, 2, 44.0, 85.0, 137.0, 203.0, 296.0
+RES open capy-nb2 pps=33000 achieved=0 gbps=0.0 detail=33000, 0, 0, 0, NA, NA, NA, NA, NA
+RES open capy-nb2 pps=33000 achieved=19560 gbps=20.51 detail=33000, 19560, 34999, 83570, 68.0, inf, inf, inf, inf
+RES open capy-nb2 pps=10000 achieved=5328 gbps=5.587 detail=10000, 5328, 0, 8, 41.0, 59.0, 89.0, 117.0, 147.0
+RES open capy-nb4 pps=40000 achieved=32686 gbps=34.274 detail=40000, 32686, 0, 280, 46.0, 84.0, 144.0, 213.0, 278.0
+RES open capy-nb4 pps=62000 achieved=61100 gbps=64.068 detail=62000, 61100, 0, 718, 62.0, 148.0, 318.0, 666.0, 1089.0
+RES open capy-nb4 pps=60000 achieved=27578 gbps=28.918 detail=60000, 27578, 0, 210316, 50.0, 108.0, 192.0, 297.0, 421.0
+RES open proxy-nb1 pps=13000 achieved=128 gbps=0.134 detail=13000, 128, 2092, 295, inf, inf, inf, inf, inf
+RES open proxy-nb1 pps=8000 achieved=7748 gbps=8.124 detail=8000, 7748, 0, 16, 128.0, 265.0, 456.0, 666.0, 823.0
+RES open proxy-nb1 pps=11000 achieved=10719 gbps=11.24 detail=11000, 10719, 0, 13, 213.0, 566.0, 1070.0, 2064.0, 2857.0
+RES open proxy-nb1 pps=12500 achieved=12224 gbps=12.818 detail=12500, 12224, 0, 28, 463.0, 1492.0, 3263.0, 5573.0, 6040.0
+RES open prismstar-nb1 pps=100 achieved=99 gbps=0.104 detail=100, 99, 0, 0, 60.0, 63.0, 4911.0, 5972.0, 5972.0
+RES open prismstar-nb1 pps=200 CLIENT-DIED rc=134
+RES open prismstar-nb2 pps=100 CLIENT-DIED rc=134
+RES open prismstar-nb4 pps=100 CLIENT-DIED rc=134
+RES open prismstar-nb2 pps=100 achieved=12 gbps=0.013 detail=100, 12, 205, 0, inf, inf, inf, inf, inf
+RES open prismstar-nb4 pps=100 CLIENT-DIED rc=134
+RES open prismstar-nb4 pps=60 achieved=60 gbps=0.063 detail=60, 60, 0, 0, 58.0, 61.0, 65.0, 69.0, 69.0
+RES open proxy-nb2 pps=13500 CLIENT-DIED rc=134
+RES open proxy-nb4 pps=13500 CLIENT-DIED rc=134
+RES open proxy-nb2 pps=12500 CLIENT-DIED rc=134
+RES open proxy-nb4 pps=12500 CLIENT-DIED rc=134
+RES open proxy-nb2 pps=11000 CLIENT-DIED rc=134
+RES open proxy-nb4 pps=11000 CLIENT-DIED rc=134
+RES open proxy-nb4probe pps=1000 achieved=982 gbps=1.03 detail=1000, 982, 0, 0, 79.0, 84.0, 126.0, 150.0, 169.0
+RES open proxy-nb2 pps=10000 CLIENT-DIED rc=134
+RES open proxy-nb4 pps=10000 CLIENT-DIED rc=134
+RES open proxy-nb2 pps=10000 CLIENT-DIED rc=134
+RES open proxy-nb2-mss9000 pps=12500 achieved=0 gbps=0.0 detail=12500, 0, 0, 0, NA, NA, NA, NA, NA
+RES open capy-nb2 pps=28000 achieved=27470 gbps=28.804 detail=28000, 27470, 0, 213, 92.0, 241.0, 623.0, 1254.0, 2230.0
+RES open capy-nb2 pps=32000 achieved=17672 gbps=18.53 detail=32000, 17672, 0, 71, 51.0, 113.0, 203.0, 307.0, 408.0
+RES open capy-nb2 pps=34000 achieved=33369 gbps=34.99 detail=34000, 33369, 0, 276, 82.0, 246.0, 691.0, 1701.0, 3377.0
+RES open proxy-nb2 pps=12500 achieved=0 gbps=0.0 detail=12500, 0, 0, 0, NA, NA, NA, NA, NA
+RES open proxy-nb4 pps=12500 CLIENT-DIED rc=134
+RES open capy-nb1 pps=17500 achieved=17057 gbps=17.886 detail=17500, 17057, 0, 69, 59.0, 124.0, 211.0, 303.0, 382.0
+RES open capy-nb4 pps=62000 achieved=34319 gbps=35.986 detail=62000, 34319, 0, 294, 55.0, 121.0, 223.0, 339.0, 475.0
+RES open capy-nb4 pps=62000 achieved=30727 gbps=32.22 detail=62000, 30727, 20322, 79264, 55.0, 146.0, inf, inf, inf
+RES open capy-nb4 pps=62000 achieved=34192 gbps=35.853 detail=62000, 34192, 43030, 85609, 68.0, inf, inf, inf, inf
+RES open capy-nb4 pps=62000 achieved=45251 gbps=47.449 detail=62000, 45251, 0, 395, 52.0, 109.0, 189.0, 278.0, 365.0
+RES open capy-nb4 pps=62000 achieved=29655 gbps=31.096 detail=62000, 29655, 14713, 43825, 52.0, 145.0, inf, inf, inf

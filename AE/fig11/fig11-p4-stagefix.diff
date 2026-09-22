@@ -1,0 +1,18 @@
+--- /home/singtel/inho/fig11/p4/switch_fe/capybara_switch_fe_fig11.p4.pre-stagefix	2026-08-13 11:01:30.568250520 +0000
++++ /home/singtel/inho/fig11/p4/switch_fe/capybara_switch_fe_fig11.p4	2026-08-13 11:01:30.608251384 +0000
+@@ -398,10 +398,11 @@
+ 
+                 // ig_dprsr_md.digest_type = TCP_MIGRATION_DIGEST;
+                 hdr.udp.checksum = 0;
+-                // Only frontend-originated migration messages steer to the
+-                // backend; backend-originated replies keep their addressed
+-                // destination (the frontend), instead of boomeranging.
+-                if (hdr.ipv4.src_ip == FE_IP) {
++                // PREPARE_MIGRATION messages are addressed to the switch and
++                // must be retargeted to the backend node (egress rewrites the
++                // dst port to the min-RPS backend). All other stages are
++                // addressed to their destination directly and just forward.
++                if (hdr.tcpmig.flag[7:4] == 4w2) {
+                     hdr.ethernet.dst_mac = BE_MAC;
+                     hdr.ipv4.dst_ip = BE_IP;
+                 }

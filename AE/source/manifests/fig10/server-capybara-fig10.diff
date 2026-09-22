@@ -1,0 +1,58 @@
+diff --git a/examples/rust/http-server.rs b/examples/rust/http-server.rs
+index 8a3f7ecd..207dbf29 100644
+--- a/examples/rust/http-server.rs
++++ b/examples/rust/http-server.rs
+@@ -554,6 +554,10 @@ fn server(local: SocketAddrV4) -> Result<()> {
+                     match e.errno {
+                         #[cfg(feature = "tcp-migration")]
+                         demikernel::ETCPMIG => { server_log!("migrated {:?} polled", qd) },
++                        // The send buffer is full: the offered load is above what this
++                        // connection can drain. Drop the response and keep serving rather
++                        // than taking the whole server down.
++                        libc::EBUSY => { server_log!("send buffer full on {:?}", qd) },
+                         _ => panic!("operation failed: {}", e),
+                     }
+                 }
+diff --git a/examples/rust/linux.mk b/examples/rust/linux.mk
+index 9b004de0..93d2d8a3 100644
+--- a/examples/rust/linux.mk
++++ b/examples/rust/linux.mk
+@@ -49,7 +49,7 @@ all-examples:
+ #	@echo "$(CARGO) build --example tcpmig-client $(CARGO_FEATURES) $(CARGO_FLAGS)"
+ #	$(CARGO) build --example tcpmig-client $(CARGO_FEATURES) $(CARGO_FLAGS)
+ #	@echo "$(CARGO) build --example dpdk-ctrl $(CARGO_FEATURES) $(CARGO_FLAGS)"
+-#	$(CARGO) build --example dpdk-ctrl $(CARGO_FEATURES) $(CARGO_FLAGS)
++	$(CARGO) build --example dpdk-ctrl $(CARGO_FEATURES) $(CARGO_FLAGS) $(EXAMPLE_FEATURES)
+ #	@echo "$(CARGO) build --example capy-proxy-fe $(CARGO_FEATURES) $(CARGO_FLAGS)"
+ #	$(CARGO) build --example capy-proxy-fe $(CARGO_FEATURES) $(CARGO_FLAGS) $(EXAMPLE_FEATURES)
+ #	@echo "$(CARGO) build --example capy-proxy-be $(CARGO_FEATURES) $(CARGO_FLAGS)"
+diff --git a/src/rust/catnip/runtime/memory/consts.rs b/src/rust/catnip/runtime/memory/consts.rs
+index 4e894886..d103604a 100644
+--- a/src/rust/catnip/runtime/memory/consts.rs
++++ b/src/rust/catnip/runtime/memory/consts.rs
+@@ -18,10 +18,10 @@ use crate::runtime::libdpdk::{
+ pub const DEFAULT_INLINE_BODY_SIZE: usize = 1024;
+ 
+ /// Default number of buffers in the header pool.
+-pub const DEFAULT_HEADER_POOL_SIZE: usize = 8192 - 1;
++pub const DEFAULT_HEADER_POOL_SIZE: usize = 8192 * 3 - 1;
+ 
+ /// Default number of buffers in the body pool.
+-pub const DEFAULT_BODY_POOL_SIZE: usize = 8192 - 1;
++pub const DEFAULT_BODY_POOL_SIZE: usize = 8192 * 3 - 1; /* fig10: jumbo multi-segment responses */
+ 
+ /// Default value for maximum body size.
+ pub const DEFAULT_MAX_BODY_SIZE: usize = (RTE_MBUF_DEFAULT_BUF_SIZE + RTE_PKTMBUF_HEADROOM) as usize;
+diff --git a/src/rust/inetstack/protocols/tcp/established/sender.rs b/src/rust/inetstack/protocols/tcp/established/sender.rs
+index 82211a91..6063375b 100644
+--- a/src/rust/inetstack/protocols/tcp/established/sender.rs
++++ b/src/rust/inetstack/protocols/tcp/established/sender.rs
+@@ -51,7 +51,7 @@ pub struct UnackedSegment {
+ /// Hard limit for unsent queue.
+ /// ToDo: Remove this.  We should limit the unsent queue by either having a (configurable) send buffer size (in bytes,
+ /// not segments) and rejecting send requests that exceed that, or by limiting the user's send buffer allocations.
+-const UNSENT_QUEUE_CUTOFF: usize = 1024 * 8;
++const UNSENT_QUEUE_CUTOFF: usize = 1024 * 64; /* fig10: multi-segment responses fill this 2-3x faster */
+ 
+ // ToDo: Consider moving retransmit timer and congestion control fields out of this structure.
+ // ToDo: Make all public fields in this structure private.

@@ -1,9 +1,10 @@
 # Capybara: Dynamic Load Balancing with Microsecond-Scale TCP Migration
 
-Source release for the SIGCOMM 2026 paper. Capybara is an L4 load balancer
-that rebalances established TCP connections through microsecond-scale live
-connection migration, co-designed between a P4 programmable switch and a
-kernel-bypass host stack (built on [Demikernel](https://github.com/microsoft/demikernel)).
+Source release and artifact-evaluation kit for the SIGCOMM 2026 paper. Capybara
+is an L4 load balancer that rebalances established TCP connections through
+microsecond-scale live connection migration, co-designed between a P4
+programmable switch and a kernel-bypass host stack (built on
+[Demikernel](https://github.com/microsoft/demikernel)).
 
 ## Layout
 
@@ -14,6 +15,7 @@ kernel-bypass host stack (built on [Demikernel](https://github.com/microsoft/dem
 | `examples/` | applications used in the evaluation (HTTP server, proxy, Redis shim glue) |
 | `eval/`, `scripts/` | evaluation and data-processing scripts |
 | `config/` | per-host configuration templates |
+| `AE/` | the artifact-evaluation kit: per-figure runners, sample data, expected results, switch programs, source provenance (see below) |
 
 ## Building
 
@@ -46,6 +48,37 @@ On the testbed, each figure is one command from `~/capybara-AE-runs/`
 Each runner brings up the switch program and host stacks it needs, runs the
 experiment, regenerates the figure with the paper's own plotting code from
 that run's data, and restores the cluster to a clean baseline.
+
+## The artifact-evaluation kit (`AE/`)
+
+`AE/` is the run kit exactly as deployed in the reviewer account on the testbed
+(`~/capybara-AE-runs/`), so what a reviewer runs can be read here first:
+
+| Path | Contents |
+|---|---|
+| `AE/README.md` | reviewer entry point: claims-to-commands table, expected numbers, pacing, cleanup |
+| `AE/ENVIRONMENT.md` | the testbed hardware and software, in full |
+| `AE/WALKTHROUGH.pdf` | one complete recorded pass: every command, its duration, console output, and figure |
+| `AE/figN/` | one directory per figure: `run_figN.sh`, its helpers, a README with expected results, and the authors' reference measurements |
+| `AE/sample-data/`, `AE/sample-figures/` | measurements from the authors' runs and the figures drawn from them |
+| `AE/plot_from_samples.sh`, `AE/paperplot/` | redraw every figure from the sample data with the paper's own plotting code, no hardware needed (`pip install -r AE/requirements.txt`) |
+| `AE/cleanup_all.sh`, `AE/arm_watchdog.sh` | restore the cluster from any state; deadman timer |
+| `AE/switch/` | the per-figure Tofino programs and control-plane scripts as they exist on the switch |
+| `AE/source/` | which branch, commit, diff and binary produced each figure (`SOURCE.md`) |
+| `AE/patches/` | client-side patches and configs for the load generator |
+
+The per-figure host-stack trees are the `ae-fig7`, `ae-fig8`, `ae-fig9` and
+`ae-fig10` branches of this repository; the load-generator trees are the
+`ae-*` branches of [ihchoi12/caladan](https://github.com/ihchoi12/caladan).
+`AE/source/SOURCE.md` has the full map.
+
+### Redraw the figures without hardware
+
+```bash
+pip install -r AE/requirements.txt      # pandas, numpy, matplotlib, brokenaxes
+bash AE/plot_from_samples.sh            # all six -> AE/sample-figures/
+bash AE/plot_from_samples.sh 7 10       # a subset
+```
 
 ## License
 
