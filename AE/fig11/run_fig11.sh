@@ -16,6 +16,8 @@ D=~/capybara-AE-runs/fig11
 step () { echo "[$(date +%H:%M:%S)] $*"; }
 
 bash ~/capybara-AE-runs/arm_watchdog.sh 7200 >/dev/null 2>&1
+step "client node7: restore reboot-cleared prerequisites (ksched, sysctls, hugepages, NIC)"
+bash ~/capybara-AE-runs/prepare_nodes.sh 7 || { echo "FATAL: node7 not ready (see above)"; exit 1; }
 sudo ip route replace 10.0.1.8/32 dev ens85f1np1 advmss 8960 2>/dev/null
 
 : > $D/results_closed_capy.txt

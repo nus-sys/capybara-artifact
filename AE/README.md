@@ -84,6 +84,9 @@ hardware/software description.
 
 ## Practical notes
 
+- Every runner first calls `prepare_nodes.sh`, which restores what a host reboot
+  clears on the client nodes (ksched module, iokernel sysctls, hugepages, data-NIC
+  link). It is idempotent; run it by hand if a runner reports `client nodes not ready`.
 - Runs are exclusive: start one experiment at a time. If a session dies
   mid-run, `bash cleanup_all.sh` restores every node and the switch; a
   watchdog does the same automatically if a runner never reports back.

@@ -45,6 +45,8 @@ switch_config(){   # port_add -> setup -> pktgen (switchd must already be up)
 }
 
 # ---------------- preflight ----------------
+step "Client nodes: restore reboot-cleared prerequisites (ksched, sysctls, hugepages, NIC)"
+bash ~/capybara-AE-runs/prepare_nodes.sh 7 6 || { echo "FATAL: client nodes not ready (see above)"; exit 1; }
 step "Preflight: connectivity node6/8/9/10 + sw1"
 for N in 6 8 9 10; do ssh -o ConnectTimeout=5 node$N true >/dev/null 2>&1 || { echo "FATAL: node$N unreachable"; exit 1; }; done
 ssh -o ConnectTimeout=5 sw1 true >/dev/null 2>&1 || { echo "FATAL: sw1 unreachable"; exit 1; }

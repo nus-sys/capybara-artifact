@@ -22,7 +22,11 @@ cleanup(){
 trap cleanup EXIT
 bash ~/capybara-AE-runs/arm_watchdog.sh 5400 >/dev/null 2>&1
 
+step "Client node7: restore reboot-cleared prerequisites (NIC link up, sysctls)"
+bash ~/capybara-AE-runs/prepare_nodes.sh 7 || { echo "FATAL: node7 not ready (see above)"; exit 1; }
+
 step "Client path: node7 kernel on the data network"
+sudo ip link set ens85f1np1 up
 ip addr show ens85f1np1 | grep -q "10.0.1.7/24" || sudo ip addr add 10.0.1.7/24 dev ens85f1np1
 sudo ip neigh replace 10.0.1.8 lladdr 08:c0:eb:b6:e8:05 dev ens85f1np1
 sudo ip neigh replace 10.0.1.9 lladdr 08:c0:eb:b6:c5:ad dev ens85f1np1

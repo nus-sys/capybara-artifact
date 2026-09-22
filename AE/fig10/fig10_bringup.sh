@@ -4,6 +4,9 @@
 set -u
 step(){ echo "[$(date +%H:%M:%S)] $*"; }
 
+step "client nodes 7/6/5: restore reboot-cleared prerequisites (ksched, sysctls, hugepages, NIC)"
+bash ~/capybara-AE-runs/prepare_nodes.sh 7 6 5 || { echo "FATAL: client nodes not ready (see above)"; exit 1; }
+
 step "switch: main_eval_fig10"
 ssh sw1 'for s in sw bft swset pktgen baseline blcfg; do tmux kill-session -t $s 2>/dev/null; done; sudo pkill -x bf_switchd 2>/dev/null; true'
 sleep 3
