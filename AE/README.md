@@ -18,8 +18,8 @@ it finishes (or when its deadman watchdog fires).
 | Up to 149× lower p99 tail latency under skew | Fig 7 | `bash fig7/run_fig7.sh quick` (or `full`) | ~18 / 45 min |
 | Continuous rebalancing vs reactive/static | Fig 8 | `bash fig8/run_fig8.sh` | ~6 min |
 | Works for stateful Redis (POSIX shim) | Fig 9 | `bash fig9/run_fig9.sh` | ~6 min |
-| >2× throughput at 12 servers under skew | Fig 10 | `bash fig10/run_fig10.sh quick` (or `full`) | ~33 / 80 min |
-| Benefits L7 LB; Prism collapses open-loop | Fig 11 | `bash fig11/run_fig11.sh` (or `full`) | ~34 / 65 min |
+| >2× throughput at 12 servers under skew | Fig 10 | `bash fig10/run_fig10.sh quick` (or `full`) | ~40 / 80 min |
+| Benefits L7 LB; Prism collapses open-loop | Fig 11 | `bash fig11/run_fig11.sh` (or `full`) | ~45 / 70 min |
 | Migration <3 µs CPU, <15 µs e2e; TCP+TLS | Fig 14 | `bash fig14/run_fig14.sh` | ~9 min |
 
 **What a pass looks like** (the figure and console print these; per-figure
@@ -39,8 +39,8 @@ are what matters. If a cell is far off, re-run that figure once on a rested
 cluster (see Pacing).
 
 **Total time.** A full fresh reviewer dry-run of all six figures (quick paths,
-with the recommended pacing breaks) completed in **~2 h 20 min wall-clock**
-(~1 h 45 min of runtime; measured end-to-end, not estimated). The `full` variants of Figs 7/10/11
+with the recommended pacing breaks) takes **about 2.5 h wall-clock**
+(measured end-to-end on 2026-09-22, including the automatic retries). The `full` variants of Figs 7/10/11
 add roughly another hour. Suggested order: `bash check_cluster.sh` (20 s), then
 **Fig 14 (~9 min)** as a smoke test, then Figs 8 and 9 (short), then the heavy ones
 (7, 10, 11) with a break after every second heavy run (see Pacing below).

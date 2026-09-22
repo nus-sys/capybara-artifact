@@ -43,8 +43,8 @@ On the testbed, each figure is one command from `~/capybara-AE-runs/`
 | Up to 149x lower p99 tail latency under skew | Fig 7 | `bash fig7/run_fig7.sh quick` (or `full`) | ~18 / 45 min |
 | Continuous rebalancing vs reactive/static | Fig 8 | `bash fig8/run_fig8.sh` | ~6 min |
 | Works for stateful Redis (POSIX shim) | Fig 9 | `bash fig9/run_fig9.sh` | ~6 min |
-| >2x throughput at 12 servers under skew | Fig 10 | `bash fig10/run_fig10.sh quick` (or `full`) | ~33 / 80 min |
-| Benefits L7 LB; Prism collapses open-loop | Fig 11 | `bash fig11/run_fig11.sh` (or `full`) | ~34 / 65 min |
+| >2x throughput at 12 servers under skew | Fig 10 | `bash fig10/run_fig10.sh quick` (or `full`) | ~40 / 80 min |
+| Benefits L7 LB; Prism collapses open-loop | Fig 11 | `bash fig11/run_fig11.sh` (or `full`) | ~45 / 70 min |
 | Migration <3 us CPU, <15 us e2e; TCP+TLS | Fig 14 | `bash fig14/run_fig14.sh` | ~9 min |
 
 Each runner brings up the switch program and host stacks it needs, runs the
