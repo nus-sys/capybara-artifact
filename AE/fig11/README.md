@@ -16,8 +16,14 @@ The closed-loop panel is unaffected and is the comparison that matters.
 | paper | 15.7 | 16.2 | 16.2 | | paper | 12.99 | 13.69 | 13.87 |
 | Prism ours | 30.5 | 59.3 | 93.0 | | ours | 0.104 | 0.013 | 0.063 |
 | paper | 24.7 | 46.9 | 91.4 | | paper | 0.088 | 0.101 | 0.091 |
-| Capybara-L7 ours | 28.0 | 39.8 | 92.9 | | ours | 17.89 | 34.99 | 64.07 |
+| Capybara-L7 ours | 25-32 | 32-40 | 87-93 | | ours | 17.89 | 34.99 | 64.07 |
 | paper | 24.7 | 47.2 | 90.9 | | paper | 17.87 | 34.15 | 65.20 |
+
+Capybara-L7 with 2 backends sits at an unstable operating point (the runner tries the
+cell up to three times and keeps the best): 34-40 Gbps on a clean run, ~31-34 when it
+lands in the migration-churn mode, and occasionally a collapsed attempt near 0 that the
+next attempt does not repeat. The claim is the 1 -> 4 backend scaling (~25 -> ~90 Gbps),
+which reproduces every run.
 
 n/m: our client/server combination collapses for the proxy above ~10 Gbps
 with multiple backends under the open-loop client (fine at low load, so the
