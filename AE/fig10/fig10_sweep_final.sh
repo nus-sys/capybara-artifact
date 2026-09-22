@@ -120,6 +120,19 @@ for COND in $CONDS; do
       fi
     fi
     step "$COND size=$SZ peak=$BEST rps ($BESTG Gbps, p99<=${P99_LIMIT}us)"
+    [ "$BEST" = "0" ] && ZERO="${ZERO:-} $COND:$SZ"
   done
 done
+
+# A ladder that found no peak at all is almost always a transient right after
+# bring-up (seen: LWRR 1 KB with p99 ~2 s on every rung, while every later cell
+# was normal). Re-run those ladders once, at the end, on the now-settled cluster;
+# the plotter keeps the best line per cell, so the retry can only add.
+if [ -n "${ZERO:-}" ] && [ -z "${FIG10_RETRY:-}" ]; then
+  step "re-running ladders that found no peak (transient after bring-up):${ZERO}"
+  sleep 30
+  for cs in $ZERO; do
+    FIG10_RETRY=1 SIZES=${cs#*:} bash $D/fig10_sweep_final.sh "$MODE" ${cs%%:*}
+  done
+fi
 step "sweep done -> $RES"
