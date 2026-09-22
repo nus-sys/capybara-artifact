@@ -4,8 +4,6 @@
 *.elf
 *.so
 *.tgz
-*.pdf
-*.png
 iokerneld*
 synthetic*
 # volatile run logs
@@ -20,4 +18,3 @@ fig*-frozen/data/*.request_sched
 fig*-frozen/data/*.server_reply*
 pyenv-lib/
 __pycache__/
-sample-figures/

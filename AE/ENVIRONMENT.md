@@ -73,5 +73,6 @@ program it needs and reverts to the `port_forward` baseline on cleanup.
 
 The results depend on the physical Tofino switch and 100 GbE NICs; they cannot be
 reproduced in a VM or on cloud instances. This is why reviewer access is
-to the authors' testbed. The complete source is archived publicly on Zenodo (DOI on the artifact
-submission page) for inspection and for anyone with equivalent hardware.
+to the authors' testbed. The complete source is published at
+https://github.com/nus-sys/capybara-artifact (release `sigcomm26-ae-v1.0`, with this kit
+under `AE/`) for inspection and for anyone with equivalent hardware.
