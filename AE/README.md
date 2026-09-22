@@ -31,7 +31,7 @@ it finishes (or when its deadman watchdog fires).
 | Fig 8  | migrations: **Capybara 4, Reactive ~20, Static 0**; Capybara p99 stays <100 us through the step | qualitative |
 | Fig 9  | Redis p99 **~0.1–0.45 ms (Capybara) vs ~10 ms (LWRR)** → **~20–120x** | ~2 orders |
 | Fig 10 | Capybara peak **2.6-2.7x** the static baseline at 1/4/8 KB responses | >2x |
-| Fig 11 | Capybara-L7 scales **33 -> 93 Gbps** (1->4 backends); proxy flat ~18 Gbps | linear vs flat |
+| Fig 11 | Capybara-L7 scales **~25-33 -> ~87-93 Gbps** (1->4 backends); proxy flat ~18 Gbps | linear vs flat |
 | Fig 14 | zero-state migration **~10 us TCP / ~12 us TLS** end-to-end (<15 us) | <15 us |
 
 Exact run-to-run numbers vary a few percent (client turbo drift); the gaps above
