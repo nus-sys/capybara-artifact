@@ -1,0 +1,8 @@
+# local editor/tool state — never part of the release
+settings.local.json
+.cursor/
+.vscode/
+.idea/
+.DS_Store
+__pycache__/
+*.pyc
