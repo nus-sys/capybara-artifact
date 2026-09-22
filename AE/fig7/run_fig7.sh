@@ -40,7 +40,7 @@ switch_config(){   # port_add -> setup -> pktgen (switchd must already be up)
   sleep 25
   ssh sw1 'tmux kill-session -t bft 2>/dev/null; tmux kill-session -t swset 2>/dev/null; tmux new-session -d -s swset "source /home/singtel/tools/set_sde.bash; /home/singtel/bf-sde-9.4.0/run_bfshell.sh -b /home/singtel/inho/Capybara/capybara/p4/switch_fe/main_eval_setup.py > /tmp/ae-swset.log 2>&1"'
   sleep 30
-  ssh sw1 'tmux kill-session -t swset 2>/dev/null; tmux kill-session -t pktgen 2>/dev/null; tmux new-session -d -s pktgen "source /home/singtel/tools/set_sde.bash; /home/singtel/bf-sde-9.4.0/run_pd_rpc.py -d asic /home/singtel/inho/Capybara/capybara/p4/switch_fe/main_eval_pktgen_timer.py -i > /tmp/ae-pktgen.log 2>&1"'
+  ssh sw1 'tmux kill-session -t swset 2>/dev/null; tmux kill-session -t pktgen 2>/dev/null; tmux new-session -d -s pktgen "source /home/singtel/tools/set_sde.bash; /home/singtel/tools/run_pd_rpc.py -d asic /home/singtel/inho/Capybara/capybara/p4/switch_fe/main_eval_pktgen_timer.py -i > /tmp/ae-pktgen.log 2>&1"'
   sleep 15
 }
 

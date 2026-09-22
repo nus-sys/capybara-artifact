@@ -42,6 +42,8 @@ if [ "$COND" = "CAPY" ]; then
   tmux kill-session -t sf7 2>/dev/null; rm -f /tmp/ae-run_sf.log
   tmux new-session -d -s sf7 "cd /homes/inho/Capybara/caladan && sudo numactl -m0 apps/synthetic/target/release/synthetic 10.0.1.8:55555 --config client_node7_shortflow.config --mode runtime-client --protocol=http --transport=tcp --samples=1 --pps=100000 --threads=1 --runtime=12 --discard_pct=0 --output=trace --rampup=0 --shortflow --shortflow-duration=10000 --exptid=/tmp/ae-run_sf > /tmp/ae-run_sf.log 2>&1"
   sleep 2
+  # fresh iokernel on node6 for every Capybara run (see restart_client_iokernel.sh)
+  bash ~/capybara-AE-runs/restart_client_iokernel.sh 6 /homes/inho/Capybara/caladan-n6 || exit 1
   ssh node6 "cd /homes/inho/Capybara/caladan-n6; tmux kill-session -t cl6 2>/dev/null; rm -f /tmp/ae-run_main.log; tmux new-session -d -s cl6 \"cd /homes/inho/Capybara/caladan-n6 && sudo numactl -m0 apps/synthetic/target/release/synthetic 10.0.1.8:55555 --config client_node6.config --mode runtime-client --protocol=http --transport=tcp --samples=1 --pps=$PPS --threads=100 --runtime=10 --discard_pct=0 --output=trace --rampup=0 $ZA --exptid=/tmp/ae-run_main > /tmp/ae-run_main.log 2>&1\"" >/dev/null 2>&1
   # poll node6 for [RESULT] (up to 44s)
   for i in $(seq 1 22); do ssh node6 "grep -q '\[RESULT\]' /tmp/ae-run_main.log 2>/dev/null" && break; sleep 2; done
