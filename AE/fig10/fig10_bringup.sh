@@ -37,8 +37,11 @@ M5=$(ssh node5 "cat /sys/bus/pci/devices/0000:b3:00.0/net/*/mtu" 2>/dev/null)
 step "iokerneld on node7/6/5"
 tmux kill-session -t iok7 2>/dev/null; sudo pkill -x iokerneld 2>/dev/null; sleep 1
 tmux new-session -d -s iok7 "cd /homes/inho/Capybara/caladan-fig8 && sudo ./iokerneld ias nicpci 0000:31:00.1 nobw > /tmp/ae-iok7.log 2>&1"
-ssh node6 "tmux kill-session -t iok6 2>/dev/null; sudo pkill -x iokerneld 2>/dev/null; sleep 1; tmux new-session -d -s iok6 \"cd /homes/inho/Capybara/caladan-fig8-n6 && sudo ./iokerneld ias nicpci 0000:b3:00.0 nobw > /tmp/ae-iok6.log 2>&1\"" >/dev/null 2>&1
-ssh node5 "tmux kill-session -t iok5 2>/dev/null; sudo pkill -x iokerneld 2>/dev/null; sleep 1; sudo mknod /dev/ksched c 280 0 2>/dev/null; sudo chmod uga+rwx /dev/ksched 2>/dev/null; tmux new-session -d -s iok5 \"cd /homes/inho/Capybara/caladan-fig8-n6 && sudo LD_LIBRARY_PATH=\\/homes/inho/lib ./iokerneld ias nicpci 0000:b3:00.0 nobw > /tmp/ae-iok5.log 2>&1\"" >/dev/null 2>&1
+# node5/6 may boot with SMT off (a lab-mate's `nosmt` kernel option); the iokernel then needs `noht`
+NOHT6=$(ssh node6 '[ "$(cat /sys/devices/system/cpu/smt/active 2>/dev/null)" = 1 ] || echo noht' 2>/dev/null)
+NOHT5=$(ssh node5 '[ "$(cat /sys/devices/system/cpu/smt/active 2>/dev/null)" = 1 ] || echo noht' 2>/dev/null)
+ssh node6 "tmux kill-session -t iok6 2>/dev/null; sudo pkill -x iokerneld 2>/dev/null; sleep 1; tmux new-session -d -s iok6 \"cd /homes/inho/Capybara/caladan-fig8-n6 && sudo ./iokerneld ias nicpci 0000:b3:00.0 nobw $NOHT6 > /tmp/ae-iok6.log 2>&1\"" >/dev/null 2>&1
+ssh node5 "tmux kill-session -t iok5 2>/dev/null; sudo pkill -x iokerneld 2>/dev/null; sleep 1; sudo mknod /dev/ksched c 280 0 2>/dev/null; sudo chmod uga+rwx /dev/ksched 2>/dev/null; tmux new-session -d -s iok5 \"cd /homes/inho/Capybara/caladan-fig8-n6 && sudo LD_LIBRARY_PATH=\\/homes/inho/lib ./iokerneld ias nicpci 0000:b3:00.0 nobw $NOHT5 > /tmp/ae-iok5.log 2>&1\"" >/dev/null 2>&1
 sleep 8
 for chk in "pgrep -x iokerneld" "ssh node6 pgrep -x iokerneld" "ssh node5 pgrep -x iokerneld"; do
   $chk >/dev/null 2>&1 || { echo "FATAL: iokerneld missing ($chk)"; exit 1; }
