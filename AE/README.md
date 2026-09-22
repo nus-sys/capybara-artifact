@@ -23,7 +23,7 @@ it finishes (or when its deadman watchdog fires).
 | Migration <3 µs CPU, <15 µs e2e; TCP+TLS | Fig 14 | `bash fig14/run_fig14.sh` | ~9 min |
 
 **What a pass looks like** (the figure and console print these; per-figure
-`figN-README` has the full expected tables and tolerances):
+`figN/README.md` has the full expected tables and tolerances):
 
 | Figure | Success signal on this testbed | Paper |
 |---|---|---|
@@ -101,7 +101,7 @@ hardware/software description.
 - Binaries and source trees live read-only under `/homes/inho/` (paths are
   already baked into the scripts); results and logs stay in your home.
 - Numbers vary a few percent run to run (client-side turbo drift is the main
-  source; see `fig7-README`); each README states the tolerance we observed.
+  source; see `fig7/README.md`); each README states the tolerance we observed.
 - If something looks off: re-run once (transient client-core contention),
   then check the per-figure README's troubleshooting notes.
 
