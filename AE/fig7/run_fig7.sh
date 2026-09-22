@@ -76,7 +76,9 @@ switch_config
 step "Clients: starting iokerneld on node7 + node6"
 tmux kill-session -t iok7 2>/dev/null; sudo pkill -x iokerneld 2>/dev/null; sleep 1
 tmux new-session -d -s iok7 "cd /homes/inho/Capybara/caladan && sudo ./iokerneld ias nicpci 0000:31:00.1 nobw > /tmp/ae-iok7.log 2>&1"
-ssh node6 "tmux kill-session -t iok6 2>/dev/null; sudo pkill -x iokerneld 2>/dev/null; sleep 1; tmux new-session -d -s iok6 \"cd /homes/inho/Capybara/caladan-n6 && sudo ./iokerneld ias nicpci 0000:b3:00.0 nobw > /tmp/ae-iok6.log 2>&1\"" >/dev/null 2>&1
+# node5/6 may boot with SMT off (a lab-mate's `nosmt` kernel option); the iokernel then needs `noht`
+NOHT6=$(ssh node6 '[ "$(cat /sys/devices/system/cpu/smt/active 2>/dev/null)" = 1 ] || echo noht' 2>/dev/null)
+ssh node6 "tmux kill-session -t iok6 2>/dev/null; sudo pkill -x iokerneld 2>/dev/null; sleep 1; tmux new-session -d -s iok6 \"cd /homes/inho/Capybara/caladan-n6 && sudo ./iokerneld ias nicpci 0000:b3:00.0 nobw $NOHT6 > /tmp/ae-iok6.log 2>&1\"" >/dev/null 2>&1
 sleep 6
 pgrep -x iokerneld >/dev/null || { echo "FATAL: iokerneld failed on node7 — see /tmp/ae-iok7.log"; exit 1; }
 ssh node6 "pgrep -x iokerneld >/dev/null" || { echo "FATAL: iokerneld failed on node6 — see node6:/tmp/ae-iok6.log"; exit 1; }
