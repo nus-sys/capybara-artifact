@@ -1,0 +1,12 @@
+# local tooling state — never part of the release
+.claude/
+.claude.json
+CLAUDE.md
+AGENTS.md
+settings.local.json
+.cursor/
+.vscode/
+.idea/
+.DS_Store
+__pycache__/
+*.pyc
