@@ -82,8 +82,8 @@ ideal, because under overload the raw completion count keeps rising while latenc
 - **Uniform is an upper bound.** It is the same 720 connections and the same offered load
   spread evenly over the 12 backends, so no policy can beat it; a cell measuring above 100%
   means the harness, not the servers, was the binding constraint there.
-- **20 KB Capybara (65% vs the paper's 89%).** Above ~650 k rps this cell is reproducibly
-  bimodal: p99 either stays at ~35 us or jumps past 20 ms, and the failures recur across
+- **16 / 20 KB Capybara.** Above ~1 M rps (16 KB) and ~650 k rps (20 KB) these cells are
+  reproducibly bimodal: p99 either stays at ~35 us or jumps past 20 ms, and the failures recur across
   retries and across migration-aggressiveness settings (`MIG_CONN_RPS_CAP` 30 and 50). At
   20 KB a response spans three segments, so a migration blackout costs proportionally more
   in-flight data than at any smaller size. Reported as measured.
