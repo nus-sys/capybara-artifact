@@ -42,7 +42,7 @@ if ! lsmod | grep -q '^ksched'; then
     sudo insmod "$KO"
   else
     echo "node$N: NO ksched.ko for kernel $KREL (looked in $KO_DIR/$KREL and $FALLBACK)"
-    echo "node$N: build one:  cp -r /homes/inho/Capybara/caladan-fig8-n6/ksched $KO_DIR/src-$KREL && cd $KO_DIR/src-$KREL && make && mkdir -p $KO_DIR/$KREL && cp build/ksched.ko $KO_DIR/$KREL/"
+    echo "node$N: build one (out of tree, on this node):  mkdir -p $KO_DIR/$KREL/build && cd /homes/inho/Capybara/caladan-fig8-n6/ksched && make BUILD_DIR=$KO_DIR/$KREL/build BUILD_DIR_MAKEFILE=$KO_DIR/$KREL/build/Makefile && cp $KO_DIR/$KREL/build/ksched.ko $KO_DIR/$KREL/"
     exit 1
   fi
 fi
