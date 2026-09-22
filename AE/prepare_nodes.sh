@@ -60,7 +60,11 @@ fi
 sudo ip link set "$NIC" up
 ip addr show "$NIC" | grep -q "$IP/24" || sudo ip addr add "$IP/24" dev "$NIC"
 
-sleep 2
+# the link needs a few seconds after a switch program change; DPDK clients do not
+# need it UP here (the PMD brings it up), but the kernel-path figures (11, 14) do
+for i in 1 2 3 4 5 6 7 8; do
+  [ "$(ip -br link show "$NIC" | awk '{print $2}')" = UP ] && break; sleep 1
+done
 printf "node%s ok: kernel=%s ksched=%s hugepages=%s nic=%s %s\n" "$N" "$KREL" \
   "$(lsmod | grep -c '^ksched')" \
   "$(cat /sys/devices/system/node/node*/hugepages/hugepages-2048kB/nr_hugepages | paste -sd/)" \
