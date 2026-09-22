@@ -34,6 +34,15 @@ sudo sysctl -q -w kernel.shm_rmid_forced=1 kernel.shmmax=18446744073692774399 \
   vm.hugetlb_shm_group=27 vm.max_map_count=16777216 net.core.somaxconn=3072
 sudo modprobe msr 2>/dev/null
 
+# SMT: the load generators were calibrated with hyperthreading on (node5/6: 40
+# threads). A `nosmt` boot option leaves the control file at "off", which can be
+# switched back at runtime; "forceoff"/"notsupported" cannot, and the runners then
+# fall back to the iokernel's `noht` mode (halved client capacity).
+if [ "$N" != 7 ] && [ "$(cat /sys/devices/system/cpu/smt/control 2>/dev/null)" = off ]; then
+  echo on | sudo tee /sys/devices/system/cpu/smt/control >/dev/null 2>&1 && sleep 2 && \
+    echo "node$N: SMT re-enabled ($(nproc) threads)"
+fi
+
 # ksched: a module built for exactly this kernel
 if ! lsmod | grep -q '^ksched'; then
   KO=$KO_DIR/$KREL/ksched.ko
