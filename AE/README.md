@@ -41,9 +41,13 @@ cluster (see Pacing).
 **Total time.** A full fresh reviewer dry-run of all six figures (quick paths,
 with the recommended pacing breaks) completed in **~2 h 20 min wall-clock**
 (~1 h 45 min of runtime; measured end-to-end, not estimated). The `full` variants of Figs 7/10/11
-add roughly another hour. Suggested order: start with **Fig 14 (~9 min)** as a
-smoke test, then Figs 8 and 9 (short), then the heavy ones (7, 10, 11) with a
-break after every second heavy run (see Pacing below).
+add roughly another hour. Suggested order: `bash check_cluster.sh` (20 s), then
+**Fig 14 (~9 min)** as a smoke test, then Figs 8 and 9 (short), then the heavy ones
+(7, 10, 11) with a break after every second heavy run (see Pacing below).
+
+Run the long ones inside `tmux` (`tmux new -s ae`, later `tmux attach -t ae`) so a
+dropped SSH connection cannot interrupt a run. If a run is interrupted anyway, it
+cleans up after itself and can simply be started again.
 
 Each `figN/` directory contains a short `README.md` with the
 expected numbers, the paper's values, and how the runner works. Runners print
