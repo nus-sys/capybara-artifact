@@ -24,6 +24,11 @@ step "Bring-up (~4 min)"
 bash $D/fig10_bringup.sh || { echo "FATAL: bring-up failed"; exit 1; }
 
 rm -f $D/fig10_results_mss8960.txt
+# A stray SIZES/FIG10_RETRY in the environment would silently narrow the sweep to a
+# subset of the response sizes, which then shows up as empty groups in the figure.
+# The one-command path always measures all five sizes.
+unset SIZES FIG10_RETRY
+step "Sweeping LWRR / Capybara / Uniform x 1, 4, 8, 16, 20 KB ($MODE mode)"
 bash $D/fig10_sweep_final.sh "$MODE" LWRR CAPY UNI 2>&1
 
 step "Generating figure"
