@@ -197,11 +197,16 @@ FIG10_PAPER = {
 
 def fig10(res_path, out):
     best = {}
+    measured, client_zero = set(), set()
     for line in open(res_path):
         m = re.match(r'RES (\w+) (\d+) (\d+) (\d+) ([\d.]+) p99=(\d+)', line.strip())
         if not m:
             continue
         cond, sz, g, p99 = m.group(1), int(m.group(2)), float(m.group(5)), float(m.group(6))
+        measured.add(sz)
+        z = re.search(r'n5=(\d+) n6=(\d+) n7=(\d+)', line)
+        if z and (z.group(1) == '0' or z.group(2) == '0'):
+            client_zero.add(sz)
         if p99 > 1000.0:
             continue
         if g > best.get((cond, sz), 0.0):
@@ -219,7 +224,12 @@ def fig10(res_path, out):
     for j, s in enumerate(['1 KB', '4 KB', '8 KB', '16 KB', '20 KB']):
         u = ours['Uniform'][j]
         if ours['LWRR'][j] == 0 and ours['Capybara'][j] == 0 and u == 0:
-            print(f'{s:>6} | NO DATA - client node limited (a client completed 0); re-run this size on a rested cluster')
+            if FIG10_SZ[j] not in measured:
+                print(f'{s:>6} | NOT MEASURED in this run (no rows for this size; run without a SIZES override)')
+            elif FIG10_SZ[j] in client_zero:
+                print(f'{s:>6} | NO DATA - client node limited (a client completed 0); re-run this size on a rested cluster')
+            else:
+                print(f'{s:>6} | NO PEAK - measured, but no rung held p99 <= 1 ms; re-run this size')
             continue
         lo = 100 * ours['LWRR'][j] / u if u else 0
         co = 100 * ours['Capybara'][j] / u if u else 0
