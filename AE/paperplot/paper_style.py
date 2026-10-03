@@ -390,8 +390,12 @@ def fig15(res_path, paper_csv, out):
         ax.set_ylim(0, max(45, ymax * 1.18))
         leg = ax.get_legend()
         if leg is not None:
-            leg.set_loc('lower center')
-            leg.set_bbox_to_anchor((0.5, 1.0))
+            handles = getattr(leg, 'legend_handles', None) or getattr(leg, 'legendHandles', [])
+            labels = [t.get_text() for t in leg.get_texts()]
+            leg.remove()
+            ax.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=6,
+                      fontsize='medium', handlelength=3.3, handletextpad=0.7, columnspacing=1.0,
+                      frameon=False)
     render('tput_vs_mig_freq', ws, out, post)
 
 
