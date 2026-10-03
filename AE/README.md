@@ -34,7 +34,7 @@ it finishes (or when its deadman watchdog fires).
 | Fig 10 | Capybara peak **2.6-2.7x** the static baseline at 1/4/8 KB responses | >2x |
 | Fig 11 | Capybara-L7 scales **~25-33 -> ~87-93 Gbps** (1->4 backends); proxy flat ~18 Gbps | linear vs flat |
 | Fig 14 | zero-state migration **~10 us TCP / ~12 us TLS** end-to-end (<15 us) | <15 us |
-| Fig 15 | one connection at **~4.5-4.8 Gbps (1 KB) / ~39 Gbps (16 KB) / ~58 Gbps (64 KB)**; 1 KB loses ~40% only at 10,000 mig/s, larger responses hold | negligible impact <16 KB up to 1,000 mig/s |
+| Fig 15 | one connection at **~4.2-4.8 Gbps (1 KB) / ~26 Gbps (16 KB) / ~34 Gbps (64 KB)** with no loss up to 100-1,000 mig/s; at 10,000 mig/s 1 KB loses ~40% and large responses about half | 4.5 / 26.9 / 33.1 Gbps; same drops |
 
 Exact run-to-run numbers vary a few percent (client turbo drift); the gaps above
 are what matters. If a cell is far off, re-run that figure once on a rested

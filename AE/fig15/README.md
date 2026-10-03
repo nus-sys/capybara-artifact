@@ -30,12 +30,29 @@ bytes, plots the figure with the paper's own plotting code, and restores the clu
 
 ## What to expect (AE criterion: same behavior pattern, not exact values)
 
-(to be filled from the validation run)
+Peak throughput of the single connection, Gbps of HTTP response bytes (paper value / this
+testbed, 2026-10-04 validation run):
+
+| response | 0 mig/s | 100 mig/s | 10,000 mig/s |
+|---|---|---|---|
+| 1 KB  | 4.5 / **4.2-4.8** | 4.5 / **4.0-4.7** | 3.0 / **2.5-2.8** (-40%) |
+| 16 KB | 26.9 / **26-27** | 26.8 / **23-27** | 19.4 / **14-20** |
+| 64 KB | 33.1 / **33-35** | 33.3 / **26-33** | 14.3 / **14-19** |
+
+(8 and 32 KB fall between their neighbours; 1, 10 and 1,000 mig/s between the columns shown.)
+The pattern to check: migration costs almost nothing up to 100-1,000 migrations/s, and only at
+10,000 migrations/s does the 1 KB connection lose ~40% and the large responses roughly half,
+as in the paper. The `migs=` field of each `RES` line is the number of migrations the two
+backends actually performed in that cell (distinct `INIT_MIG` events); at the 10,000/s
+setting the connection reaches ~5-10 k migrations/s, bounded by the ~100 µs a migration takes.
+Absolute Gbps vary a few percent between runs (client turbo drift).
 
 ## How it works
 
-- **Backends**: the Fig 8 tree (`~/Capybara/capybara-fig8`, branch `ae-fig8`) rebuilt into
-  `~/Capybara/capybara-fig15` with `--features=tcp-migration,manual-tcp-migration`. With the
+- **Backends**: the Fig 10 tree (`~/Capybara/capybara-fig10`, branch `ae-fig10`, the http-server
+  whose response size follows `DATA_SIZE`) rebuilt into `~/Capybara/capybara-fig15b` with
+  `--features=tcp-migration,server-rewriting,capy-time-log,manual-tcp-migration` (the Fig 10
+  binary's features plus the manual gate). With the
   manual feature, `MIG_PER_N` is a per-connection time gate in microseconds: after a response
   is pushed, the backend initiates the connection's migration if at least `MIG_PER_N` µs have
   passed since the previous one (`examples/rust/http-server.rs`). The runner sets
@@ -43,7 +60,8 @@ bytes, plots the figure with the paper's own plotting code, and restores the clu
 - **Switch**: the Fig 8 program and setup (2 backends on node9, ports 10000/10001; the
   1 ms pktgen keeps the min-RPS migration target current, so with one connection every
   migration goes to the idle backend — a ping-pong between the two servers).
-- **Client**: one open-loop caladan `synthetic` connection on node7 (`--threads=1`), 8 s per
+- **Client**: one open-loop caladan `synthetic` connection on node7 (`--threads=1`, the Fig 10
+  client build that speaks plain HTTP), 8 s per
   offered-load step; the step ladder per size brackets the paper's peak; the cell's value is
   the best achieved rate (the sweep stops once achieved throughput falls off the peak).
 - **Gbps**: peak requests/s × (HTTP status line + `Content-Length` header + body) × 8.

@@ -15,6 +15,7 @@ usage:
   paper_style.py fig11 <closed_capy> <closed_prismstar> <closed_proxy> <out-basename>
   paper_style.py fig14 <data_dir> <paper_ref_dir> <out-basename>
   paper_style.py fig15 <results_fig15.txt> <paper tput_vs_mig_freq.csv> <out-basename>
+  paper_style.py fig13 <results_fig13.txt> <paper server_scalability_openloop_l4.csv> <out-basename>
 """
 import os, re, shutil, statistics as st, sys, tempfile
 
@@ -399,9 +400,39 @@ def fig15(res_path, paper_csv, out):
     render('tput_vs_mig_freq', ws, out, post)
 
 
+# ---------------------------------------------------------------- fig 13
+FIG13_SERVERS = [1, 2, 4, 8, 12]
+
+
+def fig13(res_path, paper_csv, out):
+    """RES fig13 servers=<N> ... peak_rps=<r> lines -> the paper's
+    server_scalability_openloop_l4.csv layout (rows 1/2/4/8/12 servers; columns
+    LWRR, Capybara, Capybara-SW; the plot drops LWRR). Only the Capybara (hardware
+    switch) column is measured here; the Capybara-SW column is left empty."""
+    got = {}
+    for line in open(res_path):
+        m = re.search(r'servers=(\d+) .*peak_rps=(\d+)', line)
+        if m:
+            got[int(m.group(1))] = int(m.group(2))
+    paper = {}
+    for i, l in enumerate(l for l in open(paper_csv) if l.strip()):
+        paper[FIG13_SERVERS[i]] = [float(x) for x in l.strip().split(',')]
+    ws, data = workspace()
+    with open(f'{data}/server_scalability_openloop_l4.csv', 'w') as f:
+        for n in FIG13_SERVERS:
+            v = got.get(n)
+            f.write(f"0,{v if v is not None else 'nan'},nan\n")
+    print('--- peak requests/s, paper vs ours (Capybara, hardware switch)')
+    for n in FIG13_SERVERS:
+        pv = paper[n][1]; ov = got.get(n)
+        print(f'  {n:>2} servers  {pv/1e6:5.2f} M   {(ov/1e6) if ov else float("nan"):5.2f} M'
+              + ('' if ov else '   (not measured)'))
+    render('server_scalability_l4', ws, out)
+
+
 if __name__ == '__main__':
     cmds = {'fig7': fig7, 'fig8': fig8, 'fig9': fig9,
-            'fig10': fig10, 'fig11': fig11, 'fig14': fig14, 'fig15': fig15}
+            'fig10': fig10, 'fig11': fig11, 'fig14': fig14, 'fig15': fig15, 'fig13': fig13}
     if len(sys.argv) < 2 or sys.argv[1] not in cmds:
         sys.exit(__doc__)
     cmds[sys.argv[1]](*sys.argv[2:])

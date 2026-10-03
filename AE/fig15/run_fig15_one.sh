@@ -1,7 +1,8 @@
 #!/bin/bash
 # Fig-15 single cell: one TCP connection, one response size, one migration
 # frequency. Two http-server backends on node9 (ports 10000/10001) built from
-# the Fig 8 tree with the manual (time-gated) migration feature: a backend
+# the Fig 10 tree (the response-size-capable server) with the manual (time-gated)
+# migration feature: a backend
 # re-initiates the connection's migration whenever MIG_PER_N microseconds have
 # passed since the last one, and the switch (main_eval_fig8 program) sends it
 # to the other backend. The client is one open-loop caladan connection on
@@ -13,7 +14,7 @@
 set -u
 SZ=$1; FREQ=$2; LADDER=${3:-}
 RT=${RT:-8}
-T=/homes/inho/Capybara/capybara-fig15               # Fig 8 tree + manual-tcp-migration build
+T=/homes/inho/Capybara/capybara-fig15b              # Fig 10 tree (DATA_SIZE-capable http-server) + manual-tcp-migration build
 CL=/homes/inho/Capybara/caladan-fig8
 D=${CAPYBARA_DATA:-$HOME/capybara-data}
 OUT=${OUT:-$HOME/capybara-AE-runs/fig15/results_fig15.txt}
@@ -36,10 +37,10 @@ MIGENV="MAX_REACTIVE_MIGS=0 MAX_PROACTIVE_MIGS=0 SIGNAL_POLICY_MIGS=0 RECV_QUEUE
 # 1) fresh dpdk-ctrl + two backends on node9
 ssh node9 "sudo pkill -INT -x http-server.elf 2>/dev/null; sleep 1; sudo pkill -x http-server.elf 2>/dev/null; for p in 0 1; do tmux kill-session -t f15s\$p 2>/dev/null; done; sudo pkill -x dpdk-ctrl.elf 2>/dev/null; tmux kill-session -t dc9 2>/dev/null; true" >/dev/null 2>&1
 sleep 2
-ssh node9 "tmux new-session -d -s dc9 \"cd $T && make PREFIX=/homes/inho dpdk-ctrl-node9 > /tmp/ae-dc9.log 2>&1\"" >/dev/null 2>&1
+ssh node9 "tmux new-session -d -s dc9 \"cd $T && MTU=9216 timeout 1200 make PREFIX=/homes/inho dpdk-ctrl-node9 > /tmp/ae-dc9.log 2>&1\"" >/dev/null 2>&1
 sleep 14
 rm -f $D/$ID.be0 $D/$ID.be1
-ssh node9 "cd $T; for p in 0 1; do c=\$((p+1)); tmux new-session -d -s f15s\$p \"cd $T && sudo -E env $MIGENV MIG_DELAY=0 MIG_PER_N=$MIGN CONFIGURED_STATE_SIZE=0 MIN_THRESHOLD=1000000 RPS_THRESHOLD=0.3 THRESHOLD_EPSILON=0.1 CORE_ID=\$c CONFIG_PATH=scripts/config/node9_config.yaml MTU=9000 MSS=9000 NUM_CORES=4 USE_JUMBO=1 LIBOS=catnip DATA_SIZE=$SZ LD_LIBRARY_PATH=\\/homes/inho/lib:\\/homes/inho/lib/x86_64-linux-gnu numactl -m0 bin/examples/rust/http-server.elf 10.0.1.9:1000\$p > $D/$ID.be\$p 2>&1\"; sleep 2; done" >/dev/null 2>&1
+ssh node9 "cd $T; for p in 0 1; do c=\$((p+1)); tmux new-session -d -s f15s\$p \"cd $T && sudo -E env $MIGENV MIG_DELAY=0 MIG_PER_N=$MIGN CONFIGURED_STATE_SIZE=0 MIN_THRESHOLD=1000000 RPS_THRESHOLD=0.3 THRESHOLD_EPSILON=0.1 CORE_ID=\$c CONFIG_PATH=scripts/config/node9_config.yaml MTU=9000 MSS=8960 NUM_CORES=4 USE_JUMBO=1 LIBOS=catnip DATA_SIZE=$SZ LD_LIBRARY_PATH=\\/homes/inho/lib:\\/homes/inho/lib/x86_64-linux-gnu numactl -m0 bin/examples/rust/http-server.elf 10.0.1.9:1000\$p > $D/$ID.be\$p 2>&1\"; sleep 2; done" >/dev/null 2>&1
 sleep 3
 NSRV=$(ssh node9 "pgrep -c http-server.el" 2>/dev/null)
 if [ "$NSRV" != "2" ]; then echo "RES fig15 size=$SZ freq=$FREQ SERVERS=$NSRV want=2 ABORT" | tee -a $OUT; exit 1; fi
@@ -48,12 +49,16 @@ if [ "$NSRV" != "2" ]; then echo "RES fig15 size=$SZ freq=$FREQ SERVERS=$NSRV wa
 PEAK=0; PEAK_AT=0; STEPS=0; DETAIL=""
 for PPS in $LADDER; do
   tmux kill-session -t f15c 2>/dev/null; sudo pkill -x synthetic 2>/dev/null
-  rm -f /tmp/ae-f15.log
-  tmux new-session -d -s f15c "cd $CL && sudo timeout $((RT + 40)) numactl -m0 apps/synthetic/target/release/synthetic 10.0.1.8:55555 --config client_node7.config --mode runtime-client --protocol=http --transport=tcp --samples=1 --pps=$PPS --threads=1 --runtime=$RT --discard_pct=0 --output=buckets --rampup=0 --exptid=/tmp/ae-f15x > /tmp/ae-f15.log 2>&1; echo CLIENT_EXIT=\$? >> /tmp/ae-f15.log"
+  rm -f /tmp/ae-f15.log /tmp/ae-f15x.latency /tmp/ae-f15x.latency_raw
+  tmux new-session -d -s f15c "cd $CL && sudo timeout $((RT + 40)) numactl -m0 apps/synthetic/target-fig10/release/synthetic 10.0.1.8:55555 --config client_node7.config --mode runtime-client --protocol=http --transport=tcp --samples=1 --pps=$PPS --threads=1 --runtime=$RT --discard_pct=0 --output=buckets --rampup=0 --exptid=/tmp/ae-f15x > /tmp/ae-f15.log 2>&1; echo CLIENT_EXIT=\$? >> /tmp/ae-f15.log"
   # wait for the client to finish (it exits by itself after --runtime seconds)
   for i in $(seq 1 $((RT + 45))); do grep -aq "CLIENT_EXIT" /tmp/ae-f15.log 2>/dev/null && break; sleep 1; done
   R=$(grep -a "\[RESULT\]" /tmp/ae-f15.log 2>/dev/null | tail -1 | sed 's/.*\[RESULT\] *//')
   ACH=$(echo "$R" | awk -F', *' '{print $2+0}')
+  if [ "${ACH:-0}" = 0 ] && [ -s /tmp/ae-f15x.latency ]; then
+    # the fig10 client build writes a latency histogram (count per bucket) instead
+    ACH=$(awk -F, -v rt=$RT '{s+=$2} END {printf "%d", s/rt}' /tmp/ae-f15x.latency)
+  fi
   STEPS=$((STEPS + 1)); DETAIL="$DETAIL $PPS:${ACH:-0}"
   if [ "${ACH:-0}" -gt "$PEAK" ]; then PEAK=$ACH; PEAK_AT=$PPS; fi
   # keep climbing through the whole ladder (a single low step can be a transient); the
@@ -67,7 +72,9 @@ ssh node9 "sudo pkill -INT -x http-server.elf" >/dev/null 2>&1
 for i in $(seq 1 40); do ssh node9 "pgrep -x http-server.elf >/dev/null" 2>/dev/null || break; sleep 1; done
 ssh node9 "sudo pkill -x http-server.elf 2>/dev/null; true" >/dev/null 2>&1
 sleep 1
-MIGS=$(grep -c ",INIT_MIG," $D/$ID.be0 $D/$ID.be1 2>/dev/null | awk -F: '{s+=$2} END {print s+0}')
+# each migration is logged once per backend as an INIT_MIG event; the time-log dump repeats
+# lines, so count distinct events
+MIGS=$(cat $D/$ID.be0 $D/$ID.be1 2>/dev/null | grep ",INIT_MIG," | sort -u | wc -l | tr -d ' ')
 
 # 4) throughput: HTTP response bytes (status line + Content-Length header + body)
 HDR=$((37 + ${#SZ}))
