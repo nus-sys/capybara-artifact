@@ -80,7 +80,7 @@ fi
 # data-plane NIC: jumbo MTU (the servers send 8960-byte segments; a reboot resets the
 # kernel MTU to 1500 and the kernel-path figures then hang after the handshake), link up,
 # address present
-sudo ip link set "$NIC" mtu 9000 2>/dev/null
+[ "$(cat /sys/class/net/$NIC/mtu 2>/dev/null || echo 0)" -ge 9000 ] || sudo ip link set "$NIC" mtu 9000 2>/dev/null
 sudo ip link set "$NIC" up
 ip addr show "$NIC" | grep -q "$IP/24" || sudo ip addr add "$IP/24" dev "$NIC"
 

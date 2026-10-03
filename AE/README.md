@@ -21,6 +21,7 @@ it finishes (or when its deadman watchdog fires).
 | >2× throughput at 12 servers under skew | Fig 10 | `bash fig10/run_fig10.sh quick` (or `full`) | ~40 / 80 min |
 | Benefits L7 LB; Prism collapses open-loop | Fig 11 | `bash fig11/run_fig11.sh` (or `full`) | ~45 / 70 min |
 | Migration <3 µs CPU, <15 µs e2e; TCP+TLS | Fig 14 | `bash fig14/run_fig14.sh` | ~9 min |
+| Migration overhead stays low at high frequency (added on reviewer request) | Fig 15 | `bash fig15/run_fig15.sh quick` (or `full`) | ~12 / 40 min |
 
 **What a pass looks like** (the figure and console print these; per-figure
 `figN/README.md` has the full expected tables and tolerances):
@@ -33,6 +34,7 @@ it finishes (or when its deadman watchdog fires).
 | Fig 10 | Capybara peak **2.6-2.7x** the static baseline at 1/4/8 KB responses | >2x |
 | Fig 11 | Capybara-L7 scales **~25-33 -> ~87-93 Gbps** (1->4 backends); proxy flat ~18 Gbps | linear vs flat |
 | Fig 14 | zero-state migration **~10 us TCP / ~12 us TLS** end-to-end (<15 us) | <15 us |
+| Fig 15 | one connection at **~4.5-4.8 Gbps (1 KB) / ~39 Gbps (16 KB) / ~58 Gbps (64 KB)**; 1 KB loses ~40% only at 10,000 mig/s, larger responses hold | negligible impact <16 KB up to 1,000 mig/s |
 
 Exact run-to-run numbers vary a few percent (client turbo drift); the gaps above
 are what matters. If a cell is far off, re-run that figure once on a rested

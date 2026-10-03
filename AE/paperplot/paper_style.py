@@ -14,6 +14,7 @@ usage:
   paper_style.py fig10 <results.txt> <out-basename>
   paper_style.py fig11 <closed_capy> <closed_prismstar> <closed_proxy> <out-basename>
   paper_style.py fig14 <data_dir> <paper_ref_dir> <out-basename>
+  paper_style.py fig15 <results_fig15.txt> <paper tput_vs_mig_freq.csv> <out-basename>
 """
 import os, re, shutil, statistics as st, sys, tempfile
 
@@ -35,13 +36,15 @@ def workspace():
     return ws, os.path.join(ws, 'graphs', 'data')
 
 
-def render(fn_name, ws, out):
+def render(fn_name, ws, out, post=None):
     """chdir into the staged workspace and run the paper's plot function."""
     out = os.path.abspath(out)
     os.chdir(ws)
     import create_plots as cp
     cp.setup()
     fig = getattr(cp, 'plot_' + fn_name)()
+    if post:
+        post(fig)
     fig.savefig(out + '.pdf', bbox_inches='tight')
     fig.savefig(out + '.png', dpi=140, bbox_inches='tight')
     shutil.rmtree(ws, ignore_errors=True)
@@ -343,9 +346,58 @@ def fig14(data_dir, paper_ref, out):
     render('state_size_vs_mig_latency', ws, out)
 
 
+# ---------------------------------------------------------------- fig 15
+FIG15_SIZES = [1024, 8192, 16384, 32768, 65536]
+FIG15_FREQS = [0, 1, 10, 100, 1000, 10000]
+
+
+def fig15(res_path, paper_csv, out):
+    """RES fig15 size=<B> freq=<per s> ... gbps=<x> lines -> the paper's
+    tput_vs_mig_freq.csv layout (x0 = migrations/s, y0..y4 = 1/8/16/32/64 KB)."""
+    got = {}
+    for line in open(res_path):
+        m = re.search(r'size=(\d+) freq=(\d+) .*gbps=([\d.]+)', line)
+        if m:
+            got[(int(m.group(1)), int(m.group(2)))] = float(m.group(3))
+    paper = {}
+    rows = [l.strip().split(',') for l in open(paper_csv) if l.strip()][1:]
+    for r in rows:
+        for i, sz in enumerate(FIG15_SIZES):
+            paper[(sz, int(r[0]))] = float(r[1 + i])
+    ws, data = workspace()
+    with open(f'{data}/tput_vs_mig_freq.csv', 'w') as f:
+        f.write('x0,y0,y1,y2,y3,y4,y5\n')
+        for fr in FIG15_FREQS:
+            vals = [got.get((sz, fr)) for sz in FIG15_SIZES]
+            if all(v is None for v in vals):
+                continue
+            f.write(','.join([str(fr)] + [f'{v if v is not None else float("nan")}' for v in vals] + ['0']) + '\n')
+    print('--- Gbps, paper vs ours (one connection; relative to the 0 mig/s cell of the same size)')
+    print('  size   ' + ''.join(f'{fr:>14}' for fr in FIG15_FREQS))
+    for sz in FIG15_SIZES:
+        cells = []
+        for fr in FIG15_FREQS:
+            pv, ov = paper.get((sz, fr)), got.get((sz, fr))
+            cells.append(f'{pv:5.1f}/{ov:5.1f}' if ov is not None else f'{pv:5.1f}/  -  ')
+        print(f'  {sz // 1024:>3} KB ' + ''.join(f'{c:>14}' for c in cells))
+    ymax = max([v for v in got.values()] + [1.0])
+
+    def post(fig):
+        # the paper's axes stop at 45 Gbps and put the legend inside the plot; this
+        # testbed's single-connection throughput is higher, so grow the axis to the data
+        # and move the legend above the plot so no point is hidden.
+        ax = fig.axes[0]
+        ax.set_ylim(0, max(45, ymax * 1.18))
+        leg = ax.get_legend()
+        if leg is not None:
+            leg.set_loc('lower center')
+            leg.set_bbox_to_anchor((0.5, 1.0))
+    render('tput_vs_mig_freq', ws, out, post)
+
+
 if __name__ == '__main__':
     cmds = {'fig7': fig7, 'fig8': fig8, 'fig9': fig9,
-            'fig10': fig10, 'fig11': fig11, 'fig14': fig14}
+            'fig10': fig10, 'fig11': fig11, 'fig14': fig14, 'fig15': fig15}
     if len(sys.argv) < 2 or sys.argv[1] not in cmds:
         sys.exit(__doc__)
     cmds[sys.argv[1]](*sys.argv[2:])
