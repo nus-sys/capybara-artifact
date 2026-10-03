@@ -96,6 +96,16 @@ printf "node%s ok: kernel=%s ksched=%s hugepages=%s nic=%s %s mtu=%s\n" "$N" "$K
 EOF
 PREP=${PREP//__KO_DIR__/$KO_DIR}
 
+# Scratch files: every runner writes /tmp/ae-* on node7, the servers and the switch
+# host. /tmp is sticky, so a file left by another account (author vs reviewer kit,
+# singtel vs sigcomm26ae on sw1) cannot be overwritten and the bring-up fails. One
+# experiment runs at a time, so clearing them here is safe.
+sudo rm -f /tmp/ae-* 2>/dev/null
+for h in node8 node9 node10 $(for n in $NODES; do [ "$n" != 7 ] && echo node$n; done); do
+  ssh -o BatchMode=yes -o ConnectTimeout=5 $h 'sudo rm -f /tmp/ae-* 2>/dev/null' 2>/dev/null
+done
+ssh -o BatchMode=yes -o ConnectTimeout=8 sw1 'sudo rm -f /tmp/ae-* 2>/dev/null' 2>/dev/null
+
 # switch host: the SDE's bf_kpkt kernel module is not loaded at boot (sw1 has not
 # rebooted since 2024, but if it ever does, run_switchd fails with "device_add"
 # errors until the module is back). Idempotent; needs sudo on sw1, which the
