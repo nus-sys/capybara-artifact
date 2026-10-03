@@ -22,6 +22,7 @@ time) and `bin.md5` (checksums of the binaries the reviewer commands run).
 | Fig 10 | `ae-fig10` @ `a6bfd0a5` | `worktree-diffs/capybara-fig10.diff` | `manifests/fig10/server-capybara-fig10.diff` |
 | Fig 11 | commit `7cd615ad` (in history) | — | `manifests/fig11/capybara-fig11-vs-7cd615ad.diff` |
 | Fig 12 (bonus) | commit `b62db412` (in history) | `worktree-diffs/capybara-fig12.diff` | — |
+| Fig 15 (added 2026-10-03 on reviewer request) | `ae-fig8` @ `391e1a3e`, rebuilt with `--features=tcp-migration,manual-tcp-migration` into the testbed tree `~/Capybara/capybara-fig15` (time-gated `MIG_PER_N` migration in `examples/rust/http-server.rs`) | `worktree-diffs/capybara-fig8.diff` (same tree) | — |
 | Fig 14, TCP panel | `ae-fig10` @ `a6bfd0a5` | — | `manifests/fig14/source.diff` (base in `base-commit.txt`) |
 | Fig 14, TLS panel | commit `4599b186` (in history, the paper-era tree) | `worktree-diffs/capybara-fig14tls.diff` | `manifests/fig14/papertree-source.diff` |
 
