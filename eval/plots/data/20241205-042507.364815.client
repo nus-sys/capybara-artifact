@@ -1,0 +1,262 @@
+Client connected on source port: 47662
+Client connected on source port: 47664
+Client connected on source port: 47666
+Client connected on source port: 47668
+Client connected on source port: 47670
+Client connected on source port: 47672
+Client connected on source port: 47674
+Client connected on source port: 47676
+Client connected on source port: 47678
+Client connected on source port: 47680
+Client connected on source port: 47682
+Client connected on source port: 47684
+Client connected on source port: 47686
+Client connected on source port: 47688
+Client connected on source port: 47690
+Client connected on source port: 47692
+Client connected on source port: 47694
+Client connected on source port: 47696
+Client connected on source port: 47698
+Client connected on source port: 47700
+Client connected on source port: 47702
+Client connected on source port: 47704
+Client connected on source port: 47706
+Client connected on source port: 47708
+Client connected on source port: 47710
+Client connected on source port: 47712
+Client connected on source port: 47714
+Client connected on source port: 47716
+Client connected on source port: 47718
+Client connected on source port: 47720
+Client connected on source port: 47722
+Client connected on source port: 47724
+Client connected on source port: 47726
+Client connected on source port: 47728
+Client connected on source port: 47730
+Client connected on source port: 47732
+Client connected on source port: 47734
+Client connected on source port: 47736
+Client connected on source port: 47738
+Client connected on source port: 47740
+Client connected on source port: 47742
+Client connected on source port: 47744
+Client connected on source port: 47746
+Client connected on source port: 47748
+Client connected on source port: 47750
+Client connected on source port: 47752
+Client connected on source port: 47754
+Client connected on source port: 47756
+Client connected on source port: 47758
+Client connected on source port: 47760
+Client connected on source port: 47762
+Client connected on source port: 47764
+Client connected on source port: 47766
+Client connected on source port: 47768
+Client connected on source port: 47770
+Client connected on source port: 47772
+Client connected on source port: 47774
+Client connected on source port: 47776
+Client connected on source port: 47778
+Client connected on source port: 47780
+Client connected on source port: 47782
+Client connected on source port: 47784
+Client connected on source port: 47786
+Client connected on source port: 47788
+Client connected on source port: 47790
+Client connected on source port: 47792
+Client connected on source port: 47794
+Client connected on source port: 47796
+Client connected on source port: 47798
+Client connected on source port: 47800
+Client connected on source port: 47802
+Client connected on source port: 47804
+Client connected on source port: 47806
+Client connected on source port: 47808
+Client connected on source port: 47810
+Client connected on source port: 47812
+Client connected on source port: 47814
+Client connected on source port: 47816
+Client connected on source port: 47818
+Client connected on source port: 47820
+Client connected on source port: 47822
+Client connected on source port: 47824
+Client connected on source port: 47826
+Client connected on source port: 47828
+Client connected on source port: 47830
+Client connected on source port: 47832
+Client connected on source port: 47834
+Client connected on source port: 47836
+Client connected on source port: 47838
+Client connected on source port: 47840
+Client connected on source port: 47842
+Client connected on source port: 47844
+Client connected on source port: 47846
+Client connected on source port: 47848
+Client connected on source port: 47850
+Client connected on source port: 47852
+Client connected on source port: 47854
+Client connected on source port: 47856
+Client connected on source port: 47858
+Client connected on source port: 47860
+Client connected on source port: 47862
+Client connected on source port: 47864
+Client connected on source port: 47866
+Client connected on source port: 47868
+Client connected on source port: 47870
+Client connected on source port: 47872
+Client connected on source port: 47874
+Client connected on source port: 47876
+Client connected on source port: 47878
+Client connected on source port: 47880
+Client connected on source port: 47882
+Client connected on source port: 47884
+Client connected on source port: 47886
+Client connected on source port: 47888
+Client connected on source port: 47890
+Client connected on source port: 47892
+Client connected on source port: 47894
+Client connected on source port: 47896
+Client connected on source port: 47898
+Client connected on source port: 47900
+Client connected on source port: 47902
+Client connected on source port: 47904
+Client connected on source port: 47906
+Client connected on source port: 47908
+Client connected on source port: 47910
+Client connected on source port: 47912
+Client connected on source port: 47914
+Client connected on source port: 47916
+GET,0.0,0.199
+GET,229576.0,0.199
+GET,230036.0,0.199
+GET,230376.0,0.199
+GET,230377.0,0.191
+GET,230345.6,0.191
+GET,230286.0,0.191
+GET,228527.0,0.199
+GET,229313.0,0.199
+GET,229890.0,0.199
+GET,230893.0,0.199
+GET,229977.0,0.199
+GET,230459.0,0.191
+GET,30889.8,0.191
+ ====== GET ======
+  3000000 requests completed in 14.04 seconds
+  128 parallel clients
+  3 bytes payload
+  keep alive: 1
+  host configuration "save": 
+  host configuration "appendonly": no
+  multi-thread: yes
+  threads: 128
+
+Latency by percentile distribution:
+0.000% <= 0.023 milliseconds (cumulative count 8)
+50.000% <= 0.143 milliseconds (cumulative count 1505469)
+75.000% <= 0.183 milliseconds (cumulative count 2551239)
+87.500% <= 0.191 milliseconds (cumulative count 2914379)
+98.438% <= 0.199 milliseconds (cumulative count 2984071)
+99.609% <= 0.207 milliseconds (cumulative count 2990520)
+99.805% <= 0.223 milliseconds (cumulative count 2995044)
+99.902% <= 0.239 milliseconds (cumulative count 2997166)
+99.951% <= 0.263 milliseconds (cumulative count 2998920)
+99.976% <= 0.279 milliseconds (cumulative count 2999430)
+99.988% <= 0.303 milliseconds (cumulative count 2999670)
+99.994% <= 0.407 milliseconds (cumulative count 2999818)
+99.997% <= 5.951 milliseconds (cumulative count 2999909)
+99.998% <= 9.303 milliseconds (cumulative count 2999955)
+99.999% <= 90.943 milliseconds (cumulative count 2999978)
+100.000% <= 92.223 milliseconds (cumulative count 2999989)
+100.000% <= 92.799 milliseconds (cumulative count 2999996)
+100.000% <= 93.119 milliseconds (cumulative count 2999998)
+100.000% <= 93.183 milliseconds (cumulative count 2999999)
+100.000% <= 93.439 milliseconds (cumulative count 3000000)
+100.000% <= 93.439 milliseconds (cumulative count 3000000)
+
+Cumulative distribution of latencies:
+0.000% <= 0.000 milliseconds (cumulative count 0)
+0.000% <= 0.023 milliseconds (cumulative count 8)
+0.010% <= 0.031 milliseconds (cumulative count 292)
+0.024% <= 0.039 milliseconds (cumulative count 732)
+0.035% <= 0.047 milliseconds (cumulative count 1045)
+0.051% <= 0.055 milliseconds (cumulative count 1539)
+0.092% <= 0.063 milliseconds (cumulative count 2771)
+0.229% <= 0.071 milliseconds (cumulative count 6870)
+0.935% <= 0.079 milliseconds (cumulative count 28049)
+18.430% <= 0.087 milliseconds (cumulative count 552896)
+47.204% <= 0.095 milliseconds (cumulative count 1416132)
+49.306% <= 0.103 milliseconds (cumulative count 1479188)
+49.478% <= 0.111 milliseconds (cumulative count 1484344)
+49.632% <= 0.119 milliseconds (cumulative count 1488957)
+49.805% <= 0.127 milliseconds (cumulative count 1494153)
+49.982% <= 0.135 milliseconds (cumulative count 1499454)
+50.182% <= 0.143 milliseconds (cumulative count 1505469)
+50.426% <= 0.151 milliseconds (cumulative count 1512792)
+50.892% <= 0.159 milliseconds (cumulative count 1526774)
+52.831% <= 0.167 milliseconds (cumulative count 1584915)
+64.409% <= 0.175 milliseconds (cumulative count 1932281)
+85.041% <= 0.183 milliseconds (cumulative count 2551239)
+97.146% <= 0.191 milliseconds (cumulative count 2914379)
+99.469% <= 0.199 milliseconds (cumulative count 2984071)
+99.684% <= 0.207 milliseconds (cumulative count 2990520)
+99.759% <= 0.215 milliseconds (cumulative count 2992772)
+99.835% <= 0.223 milliseconds (cumulative count 2995044)
+99.881% <= 0.231 milliseconds (cumulative count 2996428)
+99.906% <= 0.239 milliseconds (cumulative count 2997166)
+99.924% <= 0.247 milliseconds (cumulative count 2997734)
+99.946% <= 0.255 milliseconds (cumulative count 2998366)
+99.964% <= 0.263 milliseconds (cumulative count 2998920)
+99.975% <= 0.271 milliseconds (cumulative count 2999264)
+99.981% <= 0.279 milliseconds (cumulative count 2999430)
+99.984% <= 0.287 milliseconds (cumulative count 2999527)
+99.987% <= 0.295 milliseconds (cumulative count 2999608)
+99.989% <= 0.303 milliseconds (cumulative count 2999670)
+99.990% <= 0.311 milliseconds (cumulative count 2999715)
+99.992% <= 0.319 milliseconds (cumulative count 2999745)
+99.992% <= 0.327 milliseconds (cumulative count 2999762)
+99.993% <= 0.335 milliseconds (cumulative count 2999781)
+99.993% <= 0.343 milliseconds (cumulative count 2999795)
+99.993% <= 0.351 milliseconds (cumulative count 2999799)
+99.993% <= 0.359 milliseconds (cumulative count 2999801)
+99.994% <= 0.367 milliseconds (cumulative count 2999813)
+99.994% <= 0.375 milliseconds (cumulative count 2999815)
+99.994% <= 0.407 milliseconds (cumulative count 2999818)
+99.994% <= 0.415 milliseconds (cumulative count 2999821)
+99.994% <= 0.431 milliseconds (cumulative count 2999825)
+99.994% <= 0.439 milliseconds (cumulative count 2999830)
+99.994% <= 0.447 milliseconds (cumulative count 2999832)
+99.994% <= 0.479 milliseconds (cumulative count 2999833)
+99.994% <= 0.487 milliseconds (cumulative count 2999834)
+99.995% <= 0.511 milliseconds (cumulative count 2999835)
+99.995% <= 0.535 milliseconds (cumulative count 2999836)
+99.995% <= 0.543 milliseconds (cumulative count 2999842)
+99.995% <= 0.551 milliseconds (cumulative count 2999846)
+99.995% <= 0.607 milliseconds (cumulative count 2999850)
+99.995% <= 0.615 milliseconds (cumulative count 2999851)
+99.995% <= 1.031 milliseconds (cumulative count 2999852)
+99.995% <= 3.007 milliseconds (cumulative count 2999858)
+99.996% <= 4.007 milliseconds (cumulative count 2999867)
+99.996% <= 5.007 milliseconds (cumulative count 2999885)
+99.997% <= 6.007 milliseconds (cumulative count 2999909)
+99.998% <= 7.007 milliseconds (cumulative count 2999928)
+99.998% <= 8.007 milliseconds (cumulative count 2999941)
+99.998% <= 9.007 milliseconds (cumulative count 2999953)
+99.999% <= 10.007 milliseconds (cumulative count 2999955)
+99.999% <= 11.007 milliseconds (cumulative count 2999957)
+99.999% <= 12.007 milliseconds (cumulative count 2999962)
+99.999% <= 13.007 milliseconds (cumulative count 2999964)
+99.999% <= 16.007 milliseconds (cumulative count 2999966)
+99.999% <= 23.007 milliseconds (cumulative count 2999967)
+99.999% <= 24.015 milliseconds (cumulative count 2999968)
+99.999% <= 90.047 milliseconds (cumulative count 2999969)
+99.999% <= 91.007 milliseconds (cumulative count 2999979)
+100.000% <= 92.031 milliseconds (cumulative count 2999987)
+100.000% <= 93.055 milliseconds (cumulative count 2999997)
+100.000% <= 94.015 milliseconds (cumulative count 3000000)
+
+Summary:
+  throughput summary: 213644.78 requests per second
+  latency summary (msec):
+          avg       min       p50       p95       p99       max
+        0.136     0.016     0.143     0.191     0.199    93.439
+

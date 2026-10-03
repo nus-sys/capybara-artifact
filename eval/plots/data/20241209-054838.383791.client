@@ -1,0 +1,921 @@
+Client connected on source port: 40456
+Client connected on source port: 40458
+Client connected on source port: 40460
+Client connected on source port: 40462
+Client connected on source port: 40464
+Client connected on source port: 40466
+Client connected on source port: 40468
+Client connected on source port: 40470
+Client connected on source port: 40472
+Client connected on source port: 40474
+Client connected on source port: 40476
+Client connected on source port: 40478
+Client connected on source port: 40480
+Client connected on source port: 40482
+Client connected on source port: 40484
+Client connected on source port: 40486
+Client connected on source port: 40488
+Client connected on source port: 40490
+Client connected on source port: 40492
+Client connected on source port: 40494
+Client connected on source port: 40496
+Client connected on source port: 40498
+Client connected on source port: 40500
+Client connected on source port: 40502
+Client connected on source port: 40504
+Client connected on source port: 40506
+Client connected on source port: 40508
+Client connected on source port: 40510
+Client connected on source port: 40512
+Client connected on source port: 40514
+Client connected on source port: 40516
+Client connected on source port: 40518
+Client connected on source port: 40520
+Client connected on source port: 40522
+Client connected on source port: 40524
+Client connected on source port: 40526
+Client connected on source port: 40528
+Client connected on source port: 40530
+Client connected on source port: 40532
+Client connected on source port: 40534
+Client connected on source port: 40536
+Client connected on source port: 40538
+Client connected on source port: 40540
+Client connected on source port: 40542
+Client connected on source port: 40544
+Client connected on source port: 40546
+Client connected on source port: 40548
+Client connected on source port: 40550
+Client connected on source port: 40552
+Client connected on source port: 40554
+Client connected on source port: 40556
+Client connected on source port: 40558
+Client connected on source port: 40560
+Client connected on source port: 40562
+Client connected on source port: 40564
+Client connected on source port: 40566
+Client connected on source port: 40568
+Client connected on source port: 40570
+Client connected on source port: 40572
+Client connected on source port: 40574
+Client connected on source port: 40576
+Client connected on source port: 40578
+Client connected on source port: 40580
+Client connected on source port: 40582
+Client connected on source port: 40584
+Client connected on source port: 40586
+Client connected on source port: 40588
+Client connected on source port: 40590
+Client connected on source port: 40592
+Client connected on source port: 40594
+Client connected on source port: 40596
+Client connected on source port: 40598
+Client connected on source port: 40600
+Client connected on source port: 40602
+Client connected on source port: 40604
+Client connected on source port: 40606
+Client connected on source port: 40608
+Client connected on source port: 40610
+Client connected on source port: 40612
+Client connected on source port: 40614
+Client connected on source port: 40616
+Client connected on source port: 40618
+Client connected on source port: 40620
+Client connected on source port: 40622
+Client connected on source port: 40624
+Client connected on source port: 40626
+Client connected on source port: 40628
+Client connected on source port: 40630
+Client connected on source port: 40632
+Client connected on source port: 40634
+Client connected on source port: 40636
+Client connected on source port: 40638
+Client connected on source port: 40640
+Client connected on source port: 40642
+Client connected on source port: 40644
+Client connected on source port: 40646
+Client connected on source port: 40648
+Client connected on source port: 40650
+Client connected on source port: 40652
+Client connected on source port: 40654
+Client connected on source port: 40656
+Client connected on source port: 40658
+Client connected on source port: 40660
+Client connected on source port: 40662
+Client connected on source port: 40664
+Client connected on source port: 40666
+Client connected on source port: 40668
+Client connected on source port: 40670
+Client connected on source port: 40672
+Client connected on source port: 40674
+Client connected on source port: 40676
+Client connected on source port: 40678
+Client connected on source port: 40680
+Client connected on source port: 40682
+Client connected on source port: 40684
+Client connected on source port: 40686
+Client connected on source port: 40688
+Client connected on source port: 40690
+Client connected on source port: 40692
+Client connected on source port: 40694
+Client connected on source port: 40696
+Client connected on source port: 40698
+Client connected on source port: 40700
+Client connected on source port: 40702
+Client connected on source port: 40704
+Client connected on source port: 40706
+Client connected on source port: 40708
+Client connected on source port: 40710
+***GET,0.0,0.007
+***GET,0.0,0.007
+***GET,0.0,0.007
+***GET,0.0,0.007
+***GET,0.0,0.007
+***GET,170400.0,0.199
+***GET,208000.0,0.199
+***GET,219050.0,0.199
+***GET,218050.0,0.199
+***GET,219650.0,0.207
+***GET,221450.0,0.199
+***GET,219450.0,0.199
+***GET,220800.0,0.199
+***GET,220750.0,0.199
+***GET,208809.5,0.199
+***GET,218250.0,0.207
+***GET,218450.0,0.207
+***GET,219600.0,0.207
+***GET,219350.0,0.207
+***GET,219100.0,0.207
+***GET,217300.0,0.207
+***GET,215800.0,0.207
+***GET,217600.0,0.207
+***GET,208285.7,0.207
+***GET,218350.0,0.207
+***GET,220000.0,0.207
+***GET,218650.0,0.207
+***GET,215350.0,0.207
+***GET,218800.0,0.207
+***GET,219000.0,0.207
+***GET,217150.0,0.207
+***GET,217050.0,0.207
+***GET,208571.4,0.207
+***GET,218550.0,0.207
+***GET,216950.0,0.207
+***GET,218750.0,0.207
+***GET,218850.0,0.207
+***GET,219450.0,0.207
+***GET,218550.0,0.207
+***GET,218450.0,0.199
+***GET,220600.0,0.199
+***GET,209714.3,0.199
+***GET,220500.0,0.199
+***GET,220900.0,0.207
+***GET,220450.0,0.207
+***GET,220650.0,0.207
+***GET,218700.0,0.207
+***GET,218800.0,0.207
+***GET,217600.0,0.207
+***GET,208285.7,0.207
+***GET,224250.0,5.295
+***GET,218950.0,0.199
+***GET,218450.0,0.199
+***GET,218950.0,0.191
+***GET,219000.0,0.191
+***GET,218400.0,0.199
+***GET,218200.0,0.191
+***GET,218650.0,0.199
+***GET,218750.0,0.199
+***GET,217150.0,0.199
+***GET,217900.0,0.191
+***GET,209333.3,0.191
+***GET,218350.0,0.199
+***GET,218600.0,0.199
+***GET,218600.0,0.199
+***GET,219250.0,0.199
+***GET,218950.0,0.199
+***GET,220950.0,0.199
+***GET,219950.0,0.207
+***GET,217700.0,0.207
+***GET,218600.0,0.199
+***GET,209047.6,0.191
+***GET,218950.0,0.199
+***GET,219450.0,0.199
+***GET,218450.0,0.207
+***GET,219600.0,0.199
+***GET,219400.0,0.199
+***GET,219750.0,0.199
+***GET,220400.0,0.199
+***GET,218600.0,0.207
+***GET,207809.5,0.199
+***GET,218800.0,0.199
+***GET,220500.0,0.199
+***GET,219550.0,0.199
+***GET,217700.0,0.207
+***GET,218700.0,0.199
+***GET,217850.0,0.199
+***GET,216600.0,0.199
+***GET,216800.0,0.199
+***GET,215800.0,0.207
+***GET,215650.0,0.207
+***GET,215550.0,0.207
+***GET,216300.0,0.207
+***GET,216600.0,0.207
+***GET,215550.0,0.207
+***GET,207238.1,0.207
+***GET,219050.0,0.199
+***GET,220750.0,0.199
+***GET,221000.0,0.199
+***GET,216100.0,0.207
+***GET,222150.0,0.207
+***GET,216750.0,0.207
+***GET,220250.0,0.199
+***GET,220350.0,0.199
+***GET,219350.0,0.199
+***GET,210857.1,0.207
+***GET,220000.0,0.207
+***GET,221900.0,0.199
+***GET,221550.0,0.207
+***GET,220500.0,0.207
+***GET,219950.0,0.207
+***GET,220500.0,0.207
+***GET,219850.0,0.199
+***GET,220400.0,0.199
+***GET,217750.0,0.207
+***GET,220850.0,0.199
+***GET,218550.0,0.207
+***GET,208952.4,0.207
+***GET,217400.0,0.215
+***GET,219700.0,0.207
+***GET,219400.0,0.199
+***GET,219450.0,0.199
+***GET,221650.0,0.199
+***GET,220550.0,0.199
+***GET,217150.0,0.199
+***GET,219000.0,0.199
+***GET,207523.8,0.199
+***GET,217950.0,0.207
+***GET,217150.0,0.207
+***GET,219850.0,0.199
+***GET,218400.0,0.199
+***GET,219400.0,0.199
+***GET,218800.0,0.199
+***GET,217700.0,0.207
+***GET,219800.0,0.199
+***GET,219100.0,0.199
+***GET,219150.0,0.199
+***GET,218100.0,0.199
+***GET,208285.7,0.199
+***GET,217550.0,0.199
+***GET,217300.0,0.199
+***GET,217600.0,0.199
+***GET,218350.0,0.199
+***GET,217900.0,0.207
+***GET,218000.0,0.199
+***GET,218650.0,0.207
+***GET,218300.0,0.199
+***GET,207381.0,0.199
+***GET,218150.0,0.207
+***GET,217400.0,0.199
+***GET,223350.0,0.215
+***GET,217650.0,0.215
+***GET,218800.0,0.207
+***GET,218400.0,0.207
+***GET,218600.0,0.207
+***GET,218450.0,0.207
+***GET,217300.0,0.207
+***GET,207761.9,0.207
+***GET,217900.0,0.207
+***GET,218500.0,0.199
+***GET,218800.0,0.199
+***GET,219300.0,0.199
+***GET,219700.0,0.199
+***GET,218950.0,0.199
+***GET,206333.3,0.199
+***GET,216650.0,0.207
+***GET,216850.0,0.207
+***GET,217350.0,0.215
+***GET,217500.0,0.215
+***GET,217750.0,0.207
+***GET,217650.0,0.207
+***GET,218300.0,0.207
+***GET,217150.0,0.207
+***GET,217350.0,0.207
+***GET,219100.0,0.199
+***GET,220650.0,0.199
+***GET,220400.0,0.199
+***GET,220150.0,0.199
+***GET,209476.2,0.199
+***GET,220250.0,0.199
+***GET,220650.0,0.199
+***GET,219800.0,0.199
+***GET,220150.0,0.207
+***GET,218650.0,0.207
+***GET,219150.0,0.207
+***GET,220800.0,0.199
+***GET,219250.0,0.199
+***GET,218800.0,0.199
+***GET,208142.9,0.199
+***GET,217600.0,0.199
+***GET,219200.0,0.207
+***GET,220000.0,0.207
+***GET,218100.0,0.207
+***GET,217400.0,0.207
+***GET,220600.0,0.207
+***GET,220200.0,0.207
+***GET,210238.1,0.207
+***GET,219750.0,0.199
+***GET,219050.0,0.199
+***GET,218700.0,0.199
+***GET,223600.0,0.199
+***GET,219150.0,0.199
+***GET,219650.0,0.199
+***GET,217900.0,0.199
+***GET,219950.0,0.199
+***GET,218550.0,0.199
+***GET,219250.0,0.199
+***GET,209333.3,0.207
+***GET,217800.0,0.207
+***GET,219550.0,0.207
+***GET,218850.0,0.207
+***GET,218900.0,0.199
+***GET,218850.0,0.199
+***GET,217950.0,0.199
+***GET,218650.0,0.199
+***GET,218150.0,0.199
+***GET,218250.0,0.199
+***GET,219950.0,0.199
+***GET,209285.7,0.207
+***GET,218050.0,0.207
+***GET,218250.0,0.199
+***GET,218450.0,0.199
+***GET,218200.0,0.207
+***GET,216700.0,0.207
+***GET,217900.0,0.207
+***GET,218400.0,0.207
+***GET,215600.0,0.215
+***GET,216100.0,0.215
+***GET,216400.0,0.215
+***GET,217250.0,0.215
+***GET,218650.0,0.207
+***GET,207904.8,0.207
+***GET,216400.0,0.207
+***GET,216400.0,0.207
+***GET,217500.0,0.199
+***GET,214850.0,0.199
+***GET,215900.0,0.207
+***GET,215250.0,0.199
+***GET,215850.0,0.207
+***GET,216850.0,0.207
+***GET,216850.0,0.207
+***GET,217250.0,0.207
+***GET,217750.0,0.199
+***GET,217850.0,0.199
+***GET,218950.0,0.207
+***GET,208285.7,0.207
+***GET,220250.0,0.207
+***GET,218950.0,0.215
+***GET,219150.0,0.215
+***GET,223200.0,0.207
+***GET,221650.0,0.207
+***GET,219800.0,0.207
+***GET,219700.0,0.199
+***GET,220700.0,0.207
+***GET,219700.0,0.207
+***GET,210476.2,0.207
+***GET,219150.0,0.207
+***GET,219750.0,0.207
+***GET,219500.0,0.207
+***GET,220950.0,0.207
+***GET,221500.0,0.199
+***GET,220300.0,0.207
+***GET,220450.0,0.207
+***GET,210000.0,0.207
+***GET,219100.0,0.207
+***GET,219350.0,0.207
+***GET,219250.0,0.207
+***GET,220800.0,0.199
+***GET,219800.0,0.207
+***GET,220500.0,0.207
+***GET,219050.0,0.207
+***GET,218600.0,0.207
+***GET,220100.0,0.207
+***GET,218800.0,0.215
+***GET,218000.0,0.215
+***GET,207428.6,0.223
+***GET,218900.0,0.207
+***GET,218550.0,0.207
+***GET,218150.0,0.215
+***GET,218100.0,0.215
+***GET,218950.0,0.215
+***GET,217850.0,0.207
+***GET,207476.2,0.215
+***GET,217750.0,0.207
+***GET,217350.0,0.207
+***GET,218400.0,0.215
+***GET,217550.0,0.215
+***GET,217100.0,0.215
+***GET,217950.0,0.215
+***GET,218550.0,0.215
+***GET,218500.0,0.215
+***GET,217950.0,0.215
+***GET,217150.0,0.215
+***GET,216800.0,0.215
+***GET,218250.0,0.215
+***GET,206428.6,0.215
+***GET,217300.0,0.215
+***GET,219250.0,0.215
+***GET,218000.0,0.215
+***GET,222500.0,0.199
+***GET,218900.0,0.199
+***GET,218550.0,0.207
+***GET,219050.0,0.207
+***GET,218600.0,0.207
+***GET,219650.0,0.207
+***GET,208666.7,0.207
+***GET,218600.0,0.207
+***GET,220100.0,0.207
+***GET,218850.0,0.215
+***GET,219950.0,0.199
+***GET,218200.0,0.207
+***GET,220250.0,0.207
+***GET,219600.0,0.207
+***GET,218950.0,0.207
+***GET,208142.9,0.207
+***GET,218600.0,0.215
+***GET,220150.0,0.207
+***GET,220050.0,0.207
+***GET,220400.0,0.207
+***GET,219950.0,0.207
+***GET,220400.0,0.207
+***GET,219150.0,0.207
+***GET,219650.0,0.207
+***GET,218700.0,0.207
+***GET,209666.7,0.207
+***GET,219650.0,0.207
+***GET,219250.0,0.199
+***GET,220150.0,0.199
+***GET,218400.0,0.199
+***GET,220150.0,0.199
+***GET,219500.0,0.207
+***GET,219650.0,0.199
+***GET,221050.0,0.199
+***GET,218800.0,0.207
+***GET,219750.0,0.199
+***GET,219300.0,0.199
+***GET,219650.0,0.199
+***GET,209904.8,0.199
+***GET,219850.0,0.199
+***GET,221100.0,0.199
+***GET,220350.0,0.199
+***GET,218050.0,0.199
+***GET,217650.0,0.199
+***GET,218550.0,0.199
+***GET,218200.0,0.207
+***GET,218600.0,0.199
+***GET,218350.0,0.199
+***GET,209238.1,0.199
+***GET,220600.0,0.199
+***GET,224500.0,0.199
+***GET,219700.0,0.191
+***GET,220900.0,0.199
+***GET,221350.0,0.199
+***GET,221150.0,0.199
+***GET,221150.0,0.199
+***GET,220700.0,0.199
+***GET,210285.7,0.199
+***GET,220700.0,0.199
+***GET,220750.0,0.199
+***GET,219500.0,0.199
+***GET,220900.0,0.199
+***GET,221400.0,0.199
+***GET,220250.0,0.207
+***GET,218800.0,0.207
+***GET,219500.0,0.207
+***GET,208809.5,0.207
+***GET,220300.0,0.207
+***GET,218550.0,0.207
+***GET,220400.0,0.207
+***GET,216900.0,0.207
+***GET,218900.0,0.207
+***GET,217250.0,0.207
+***GET,217400.0,0.207
+***GET,215650.0,0.207
+***GET,216900.0,0.207
+***GET,214950.0,0.207
+***GET,206381.0,0.207
+***GET,214000.0,0.207
+***GET,216900.0,0.207
+***GET,215800.0,0.207
+***GET,215650.0,0.199
+***GET,215000.0,0.207
+***GET,216250.0,0.207
+***GET,215200.0,0.207
+***GET,215600.0,0.207
+***GET,214950.0,0.207
+***GET,213850.0,0.207
+***GET,214350.0,0.215
+***GET,208619.0,0.199
+***GET,217650.0,0.199
+***GET,219000.0,0.199
+***GET,218000.0,0.199
+***GET,218250.0,0.207
+***GET,218550.0,0.199
+***GET,219600.0,0.199
+***GET,218250.0,0.199
+***GET,220050.0,0.199
+***GET,218450.0,0.207
+***GET,207142.9,0.207
+***GET,224900.0,0.207
+***GET,217200.0,0.207
+***GET,217200.0,0.207
+***GET,219000.0,0.207
+***GET,219750.0,0.207
+***GET,219650.0,0.207
+***GET,218450.0,0.207
+***GET,215850.0,0.207
+***GET,207190.5,0.207
+***GET,218100.0,0.199
+***GET,218150.0,0.199
+***GET,220050.0,0.199
+***GET,219700.0,0.199
+***GET,219750.0,0.199
+***GET,219700.0,0.207
+***GET,219000.0,0.207
+***GET,217700.0,0.215
+***GET,216650.0,0.207
+***GET,206761.9,0.215
+***GET,218200.0,0.207
+***GET,219650.0,0.207
+***GET,216950.0,0.215
+***GET,216650.0,0.207
+***GET,217550.0,0.207
+***GET,217550.0,0.207
+***GET,220650.0,0.207
+***GET,219600.0,0.207
+***GET,218950.0,0.199
+***GET,218000.0,0.207
+***GET,208142.9,0.207
+***GET,217200.0,0.215
+***GET,217800.0,0.215
+***GET,218500.0,0.207
+***GET,218050.0,0.215
+***GET,218100.0,0.207
+***GET,218600.0,0.199
+***GET,218500.0,0.207
+***GET,220250.0,0.207
+***GET,218400.0,0.207
+***GET,221150.0,0.207
+***GET,208857.1,0.207
+***GET,219300.0,0.207
+***GET,218250.0,0.207
+***GET,218700.0,0.215
+***GET,218700.0,0.207
+***GET,219050.0,0.199
+***GET,218450.0,0.199
+***GET,219050.0,0.199
+***GET,219100.0,0.199
+***GET,209952.4,0.199
+***GET,222600.0,0.207
+***GET,219800.0,0.207
+***GET,218850.0,0.207
+***GET,219800.0,0.207
+***GET,219950.0,0.207
+***GET,220150.0,0.207
+***GET,208666.7,0.207
+***GET,218150.0,0.207
+***GET,219700.0,0.207
+***GET,219050.0,0.207
+***GET,218000.0,0.199
+***GET,218350.0,0.199
+***GET,218450.0,0.199
+***GET,218550.0,0.199
+***GET,215350.0,0.199
+***GET,208523.8,0.199
+***GET,218950.0,0.199
+***GET,219050.0,0.199
+***GET,218350.0,0.199
+***GET,217900.0,0.191
+***GET,217750.0,0.199
+***GET,219400.0,0.207
+***GET,218700.0,0.199
+***GET,218250.0,0.207
+***GET,217850.0,0.207
+***GET,207666.7,0.199
+***GET,218000.0,0.199
+***GET,217950.0,0.199
+***GET,218150.0,0.207
+***GET,218000.0,0.199
+***GET,217250.0,0.199
+***GET,217500.0,0.199
+***GET,219100.0,0.199
+***GET,217150.0,0.207
+***GET,217650.0,0.199
+***GET,218500.0,0.199
+***GET,217200.0,0.191
+***GET,219200.0,0.199
+***GET,208238.1,0.199
+***GET,219100.0,0.199
+***GET,219900.0,0.199
+***GET,218500.0,0.199
+***GET,220500.0,0.199
+***GET,219500.0,0.207
+***GET,218600.0,0.199
+***GET,219100.0,0.199
+***GET,219050.0,0.207
+***GET,209190.5,0.207
+***GET,219250.0,0.207
+***GET,225350.0,0.207
+***GET,221100.0,0.199
+***GET,221750.0,0.191
+***GET,221600.0,0.199
+***GET,220500.0,0.199
+***GET,220550.0,0.199
+***GET,221850.0,0.199
+***GET,221800.0,0.199
+***GET,221050.0,0.199
+***GET,211761.9,0.207
+***GET,222050.0,0.199
+***GET,218800.0,0.207
+***GET,219500.0,0.199
+***GET,218900.0,0.199
+***GET,220850.0,0.199
+***GET,220800.0,0.199
+***GET,220900.0,0.199
+***GET,220900.0,0.207
+***GET,220850.0,0.199
+***GET,219350.0,0.207
+***GET,220100.0,0.199
+***GET,221650.0,0.199
+***GET,221150.0,0.199
+***GET,209857.1,0.191
+***GET,220350.0,0.199
+***GET,218900.0,0.199
+***GET,218050.0,0.207
+***GET,218100.0,0.207
+***GET,219500.0,0.207
+***GET,219200.0,0.207
+***GET,218000.0,0.207
+***GET,217900.0,0.207
+***GET,218800.0,0.207
+***GET,217250.0,0.215
+***GET,218550.0,0.207
+***GET,207952.4,0.207
+***GET,219500.0,0.207
+***GET,218250.0,0.207
+***GET,219750.0,0.207
+***GET,220550.0,0.207
+***GET,221400.0,0.207
+***GET,222150.0,0.207
+***GET,209714.3,0.207
+***GET,219150.0,0.207
+***GET,218500.0,0.215
+***GET,219050.0,0.207
+***GET,217400.0,0.215
+***GET,217200.0,0.207
+***GET,218850.0,0.207
+***GET,217750.0,0.207
+***GET,222500.0,0.207
+***GET,216600.0,0.207
+***GET,208095.2,0.207
+***GET,219400.0,0.207
+***GET,218550.0,0.207
+***GET,218850.0,0.207
+***GET,218600.0,0.199
+***GET,218950.0,0.199
+***GET,217200.0,0.199
+***GET,208571.4,0.199
+***GET,218250.0,0.199
+***GET,218700.0,0.199
+***GET,218850.0,0.199
+***GET,218250.0,0.199
+***GET,217700.0,0.199
+***GET,220350.0,0.199
+***GET,218700.0,0.199
+***GET,219100.0,0.199
+***GET,208619.0,0.199
+***GET,217700.0,0.199
+***GET,217650.0,0.199
+***GET,218400.0,0.199
+***GET,217800.0,0.199
+***GET,218300.0,0.191
+***GET,216850.0,0.199
+***GET,218800.0,0.191
+***GET,218000.0,0.199
+***GET,218300.0,0.199
+***GET,217850.0,0.199
+***GET,216850.0,0.207
+***GET,207619.0,0.199
+***GET,218550.0,0.199
+***GET,217150.0,0.199
+***GET,218150.0,0.199
+***GET,216700.0,0.207
+***GET,218600.0,0.207
+***GET,217950.0,0.207
+***GET,217650.0,0.207
+***GET,207428.6,0.207
+***GET,219000.0,0.207
+***GET,218400.0,0.207
+***GET,216700.0,0.207
+***GET,217150.0,0.207
+***GET,216900.0,0.207
+***GET,218350.0,0.207
+***GET,217150.0,0.207
+***GET,218950.0,0.215
+***GET,217600.0,0.207
+***GET,217150.0,0.207
+***GET,216900.0,0.207
+***GET,211381.0,0.207
+***GET,218050.0,0.207
+***GET,217950.0,0.207
+***GET,218000.0,0.207
+***GET,220050.0,0.207
+***GET,218200.0,0.207
+***GET,217700.0,0.207
+***GET,208142.9,0.207
+***GET,218650.0,0.207
+***GET,218300.0,0.207
+***GET,218200.0,0.207
+***GET,219400.0,0.207
+***GET,218900.0,0.207
+***GET,218000.0,0.215
+***GET,218800.0,0.207
+***GET,207619.0,0.207
+***GET,218150.0,0.207
+***GET,217400.0,0.207
+***GET,217700.0,0.215
+***GET,217450.0,0.207
+***GET,216750.0,0.207
+***GET,217200.0,0.207
+***GET,216850.0,0.207
+***GET,215950.0,0.207
+***GET,217250.0,0.207
+***GET,216650.0,0.207
+***GET,203714.3,0.207
+***GET,214150.0,0.215
+***GET,215150.0,0.215
+***GET,218300.0,0.207
+***GET,217450.0,0.207
+***GET,218150.0,0.207
+***GET,218200.0,0.207
+***GET,206095.2,0.207
+***GET,217700.0,0.207
+***GET,218300.0,0.207
+***GET,218100.0,0.207
+***GET,217700.0,0.207
+***GET,217250.0,0.215
+***GET,216950.0,0.207
+***GET,208476.2,0.207
+***GET,218250.0,0.207
+***GET,218600.0,0.207
+***GET,218600.0,0.215
+***GET,218500.0,0.207
+***GET,217450.0,0.207
+***GET,217600.0,0.207
+***GET,218600.0,0.199
+***GET,207761.9,0.207
+***GET,221100.0,0.207
+***GET,220650.0,0.199
+***GET,219400.0,0.207
+***GET,218350.0,0.207
+***GET,218100.0,0.215
+***GET,218750.0,0.207
+***GET,219050.0,0.199
+***GET,218000.0,0.207
+***GET,208095.2,0.199
+***GET,216750.0,0.199
+***GET,217450.0,0.199
+***GET,218700.0,0.207
+***GET,218000.0,0.207
+***GET,219200.0,0.207
+***GET,218650.0,0.215
+***GET,218400.0,0.207
+***GET,217900.0,0.207
+***GET,217900.0,0.207
+***GET,217700.0,0.199
+***GET,217850.0,0.207
+***GET,219250.0,0.207
+***GET,218250.0,0.207
+***GET,209047.6,0.207
+***GET,218500.0,0.207
+***GET,217950.0,0.207
+***GET,217350.0,0.207
+***GET,218250.0,0.207
+***GET,219100.0,0.207
+***GET,218850.0,0.207
+***GET,219300.0,0.207
+***GET,208476.2,0.207
+***GET,219050.0,0.207
+***GET,218550.0,0.207
+***GET,217600.0,0.207
+***GET,217900.0,0.207
+***GET,218050.0,0.207
+***GET,217400.0,0.207
+***GET,217350.0,0.207
+***GET,219200.0,0.207
+***GET,208761.9,0.207
+***GET,219150.0,0.207
+***GET,219150.0,0.207
+***GET,219950.0,0.207
+ ====== GET ======
+  2999904 requests completed in 14.01 seconds
+  128 parallel clients
+  3 bytes payload
+  keep alive: 1
+  host configuration "save": 
+  host configuration "appendonly": no
+  multi-thread: yes
+  threads: 128
+
+Latency by percentile distribution:
+0.000% <= 0.023 milliseconds (cumulative count 8)
+50.000% <= 0.111 milliseconds (cumulative count 1504878)
+75.000% <= 0.191 milliseconds (cumulative count 2250856)
+87.500% <= 0.199 milliseconds (cumulative count 2814738)
+96.875% <= 0.207 milliseconds (cumulative count 2984264)
+99.609% <= 0.215 milliseconds (cumulative count 2994031)
+99.805% <= 0.223 milliseconds (cumulative count 2995901)
+99.902% <= 0.231 milliseconds (cumulative count 2997730)
+99.951% <= 0.239 milliseconds (cumulative count 2998609)
+99.976% <= 0.255 milliseconds (cumulative count 2999222)
+99.988% <= 0.271 milliseconds (cumulative count 2999545)
+99.994% <= 0.295 milliseconds (cumulative count 2999735)
+99.997% <= 5.279 milliseconds (cumulative count 2999815)
+99.998% <= 5.367 milliseconds (cumulative count 2999859)
+99.999% <= 85.695 milliseconds (cumulative count 2999882)
+100.000% <= 87.167 milliseconds (cumulative count 2999893)
+100.000% <= 87.679 milliseconds (cumulative count 2999899)
+100.000% <= 87.871 milliseconds (cumulative count 2999902)
+100.000% <= 87.935 milliseconds (cumulative count 2999903)
+100.000% <= 90.047 milliseconds (cumulative count 2999904)
+100.000% <= 90.047 milliseconds (cumulative count 2999904)
+
+Cumulative distribution of latencies:
+0.000% <= 0.000 milliseconds (cumulative count 0)
+0.000% <= 0.023 milliseconds (cumulative count 8)
+0.025% <= 0.031 milliseconds (cumulative count 742)
+0.036% <= 0.039 milliseconds (cumulative count 1068)
+0.038% <= 0.047 milliseconds (cumulative count 1138)
+0.040% <= 0.055 milliseconds (cumulative count 1187)
+0.048% <= 0.063 milliseconds (cumulative count 1440)
+0.098% <= 0.071 milliseconds (cumulative count 2930)
+0.410% <= 0.079 milliseconds (cumulative count 12299)
+3.789% <= 0.087 milliseconds (cumulative count 113675)
+30.750% <= 0.095 milliseconds (cumulative count 922463)
+49.771% <= 0.103 milliseconds (cumulative count 1493093)
+50.164% <= 0.111 milliseconds (cumulative count 1504878)
+50.292% <= 0.119 milliseconds (cumulative count 1508709)
+50.454% <= 0.127 milliseconds (cumulative count 1513566)
+50.584% <= 0.135 milliseconds (cumulative count 1517472)
+50.696% <= 0.143 milliseconds (cumulative count 1520820)
+50.836% <= 0.151 milliseconds (cumulative count 1525026)
+51.064% <= 0.159 milliseconds (cumulative count 1531866)
+51.652% <= 0.167 milliseconds (cumulative count 1549497)
+53.598% <= 0.175 milliseconds (cumulative count 1607892)
+59.795% <= 0.183 milliseconds (cumulative count 1793780)
+75.031% <= 0.191 milliseconds (cumulative count 2250856)
+93.828% <= 0.199 milliseconds (cumulative count 2814738)
+99.479% <= 0.207 milliseconds (cumulative count 2984264)
+99.804% <= 0.215 milliseconds (cumulative count 2994031)
+99.867% <= 0.223 milliseconds (cumulative count 2995901)
+99.928% <= 0.231 milliseconds (cumulative count 2997730)
+99.957% <= 0.239 milliseconds (cumulative count 2998609)
+99.970% <= 0.247 milliseconds (cumulative count 2998992)
+99.977% <= 0.255 milliseconds (cumulative count 2999222)
+99.983% <= 0.263 milliseconds (cumulative count 2999380)
+99.988% <= 0.271 milliseconds (cumulative count 2999545)
+99.992% <= 0.279 milliseconds (cumulative count 2999665)
+99.993% <= 0.287 milliseconds (cumulative count 2999709)
+99.994% <= 0.295 milliseconds (cumulative count 2999735)
+99.995% <= 0.303 milliseconds (cumulative count 2999743)
+99.995% <= 0.311 milliseconds (cumulative count 2999752)
+99.995% <= 0.319 milliseconds (cumulative count 2999757)
+99.995% <= 0.327 milliseconds (cumulative count 2999759)
+99.995% <= 0.335 milliseconds (cumulative count 2999760)
+99.995% <= 0.391 milliseconds (cumulative count 2999761)
+99.995% <= 0.399 milliseconds (cumulative count 2999762)
+99.995% <= 0.415 milliseconds (cumulative count 2999763)
+99.995% <= 0.455 milliseconds (cumulative count 2999764)
+99.995% <= 0.471 milliseconds (cumulative count 2999765)
+99.995% <= 0.487 milliseconds (cumulative count 2999766)
+99.995% <= 0.535 milliseconds (cumulative count 2999767)
+99.995% <= 0.551 milliseconds (cumulative count 2999768)
+99.996% <= 0.559 milliseconds (cumulative count 2999770)
+99.996% <= 0.615 milliseconds (cumulative count 2999771)
+99.996% <= 0.631 milliseconds (cumulative count 2999772)
+99.996% <= 0.847 milliseconds (cumulative count 2999773)
+99.996% <= 0.863 milliseconds (cumulative count 2999774)
+99.996% <= 1.031 milliseconds (cumulative count 2999775)
+99.996% <= 4.007 milliseconds (cumulative count 2999776)
+99.999% <= 6.007 milliseconds (cumulative count 2999872)
+99.999% <= 85.055 milliseconds (cumulative count 2999876)
+99.999% <= 86.015 milliseconds (cumulative count 2999884)
+100.000% <= 87.039 milliseconds (cumulative count 2999892)
+100.000% <= 88.063 milliseconds (cumulative count 2999903)
+100.000% <= 90.047 milliseconds (cumulative count 2999904)
+
+Summary:
+  throughput summary: 214110.62 requests per second
+  latency summary (msec):
+          avg       min       p50       p95       p99       max
+        0.143     0.016     0.111     0.207     0.207    90.047
+

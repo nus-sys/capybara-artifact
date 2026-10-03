@@ -1,0 +1,32 @@
+[CAPYLOG] capy_profile is on
+The value for -l flag is: 2
+core_id: 2
+EAL: Detected 64 lcore(s)
+EAL: Detected 2 NUMA nodes
+EAL: Auto-detected process type: SECONDARY
+EAL: Detected shared linkage of DPDK
+EAL: Multi-process socket /var/run/dpdk/rte/mp_socket_3417483_3aa61bfb995edf
+EAL: Selected IOVA mode 'PA'
+EAL: Probing VFIO support...
+EAL: Probe PCI driver: mlx5_pci (15b3:1017) device: 0000:31:00.1 (socket 0)
+EAL: No legacy callbacks, legacy socket not created
+DPDK reports that 1 ports (interfaces) are available.
+Running as secondary process
+Running as secondary process
+Received Ctrl-C signal.
+Exiting process.
+dpdk_print_eth_stats
+eth stats for port 0
+RX-packets: 88004 RX-dropped: 0 RX-bytes: 9989136
+TX-packets: 88000 TX-bytes: 9989266
+RX-error: 0 TX-error: 0 RX-mbuf-fail: 0
+
+[CAPYLOG] dumping profiler data
+
+[CAPYLOG] dumping total profiler data (name, count, total_duration)
+PROF_EXPORT_TCP,10499,413046
+PROF_IMPORT_TCP,10500,1700538
+do_receive,41998,32434021
+PROF_IMPORT_TLS,10500,821513316
+PROF_EXPORT_TLS,10499,3044684
+capy_time_log_dump
