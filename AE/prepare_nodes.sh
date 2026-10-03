@@ -97,7 +97,7 @@ PREP=${PREP//__KO_DIR__/$KO_DIR}
 # rebooted since 2024, but if it ever does, run_switchd fails with "device_add"
 # errors until the module is back). Idempotent; needs sudo on sw1, which the
 # reviewer account has.
-ssh -o ConnectTimeout=8 sw1 'if lsmod | grep -q "^bf_kpkt"; then echo "sw1 ok: bf_kpkt loaded"; else sudo /home/singtel/bf-sde-9.4.0/install/bin/bf_kpkt_mod_load /home/singtel/bf-sde-9.4.0/install && echo "sw1 ok: bf_kpkt loaded now" || echo "sw1: could not load bf_kpkt"; fi' 2>/dev/null || echo "sw1: unreachable (runners will fail at switch bring-up)"
+ssh -o ConnectTimeout=8 sw1 'if ! lsmod | grep -q "^i2c_i801"; then sudo modprobe i2c-i801 && echo "sw1 ok: i2c-i801 loaded now (/dev/i2c-0 for QSFP control; without it no port comes up)" || echo "sw1: could not load i2c-i801 (ports will stay down)"; fi; if lsmod | grep -q "^bf_kpkt"; then echo "sw1 ok: bf_kpkt loaded"; else sudo /home/singtel/bf-sde-9.4.0/install/bin/bf_kpkt_mod_load /home/singtel/bf-sde-9.4.0/install && echo "sw1 ok: bf_kpkt loaded now" || echo "sw1: could not load bf_kpkt"; fi' 2>/dev/null || echo "sw1: unreachable (runners will fail at switch bring-up)"
 
 rc=0
 for N in $NODES; do
