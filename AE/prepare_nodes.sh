@@ -107,7 +107,7 @@ for N in $NODES; do
   if [ "$N" = "$(hostname | sed 's/.*node//')" ]; then
     bash -c "$PREP" || rc=1
   else
-    ssh -o ConnectTimeout=8 node$N "bash -s" <<<"$PREP" || rc=1
+    ssh -o BatchMode=yes -o ConnectTimeout=8 node$N "bash -s" <<<"$PREP" || rc=1
   fi
 done
 [ $rc = 0 ] || echo "prepare_nodes: a client node is not ready (see above)"

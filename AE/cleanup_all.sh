@@ -8,7 +8,7 @@ step "clients (node5/6/7)"
 for s in cl7 sf7 f8c f9c ab cal sweep pilot; do tmux kill-session -t $s 2>/dev/null; done
 sudo pkill -x synthetic 2>/dev/null
 for n in 5 6; do
-  ssh -o ConnectTimeout=5 node$n "for s in cl5 cl6 sf6 cal ab; do tmux kill-session -t \$s 2>/dev/null; done; sudo pkill -x synthetic 2>/dev/null; true" >/dev/null 2>&1
+  ssh -o BatchMode=yes -o ConnectTimeout=5 node$n "for s in cl5 cl6 sf6 cal ab; do tmux kill-session -t \$s 2>/dev/null; done; sudo pkill -x synthetic 2>/dev/null; true" >/dev/null 2>&1
 done
 
 step "servers + dpdk-ctrl (node8/9/10)"
@@ -24,7 +24,7 @@ done
 
 step "iokerneld (node5/6/7)"
 tmux kill-session -t iok7 2>/dev/null; sudo pkill -x iokerneld 2>/dev/null
-for n in 5 6; do ssh -o ConnectTimeout=5 node$n "tmux kill-session -t iok$n 2>/dev/null; sudo pkill -x iokerneld 2>/dev/null; true" >/dev/null 2>&1; done
+for n in 5 6; do ssh -o BatchMode=yes -o ConnectTimeout=5 node$n "tmux kill-session -t iok$n 2>/dev/null; sudo pkill -x iokerneld 2>/dev/null; true" >/dev/null 2>&1; done
 
 step "node7 hugepages -> boot default (1568)"
 sleep 2   # let the killed iokerneld release its hugetlb pool first
