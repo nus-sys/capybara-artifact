@@ -23,10 +23,10 @@ if [ "$FREQ" = 0 ]; then MIGN=0; else MIGN=$((1000000 / FREQ)); fi   # us betwee
 if [ -z "$LADDER" ]; then
   case $SZ in
     1024)  LADDER="300000 400000 500000 600000 700000 800000" ;;
-    8192)  LADDER="150000 200000 250000 300000 350000 400000" ;;
-    16384) LADDER="100000 150000 200000 250000 300000" ;;
-    32768) LADDER="60000 90000 120000 150000 180000" ;;
-    65536) LADDER="30000 45000 60000 75000 90000 110000" ;;
+    8192)  LADDER="200000 300000 400000 500000 600000 700000" ;;
+    16384) LADDER="150000 200000 300000 400000 500000" ;;
+    32768) LADDER="80000 120000 160000 200000 250000 300000" ;;
+    65536) LADDER="50000 80000 110000 140000 170000 200000" ;;
     *)     LADDER="50000 100000 200000 400000" ;;
   esac
 fi
@@ -56,8 +56,8 @@ for PPS in $LADDER; do
   ACH=$(echo "$R" | awk -F', *' '{print $2+0}')
   STEPS=$((STEPS + 1)); DETAIL="$DETAIL $PPS:${ACH:-0}"
   if [ "${ACH:-0}" -gt "$PEAK" ]; then PEAK=$ACH; PEAK_AT=$PPS; fi
-  # past saturation: achieved fell well below the best so far -> stop climbing
-  if [ "$PEAK" -gt 0 ] && [ $((ACH * 10)) -lt $((PEAK * 8)) ]; then break; fi
+  # keep climbing through the whole ladder (a single low step can be a transient); the
+  # cell's value is the best achieved rate
 done
 tmux kill-session -t f15c 2>/dev/null; sudo pkill -x synthetic 2>/dev/null
 

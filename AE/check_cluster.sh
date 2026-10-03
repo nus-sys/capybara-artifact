@@ -38,16 +38,24 @@ case "$prog" in
   *)                        warn "switch: running $prog, not the baseline -> cleanup_all.sh restores it" ;;
 esac
 
+# 3b. switch-host kernel modules that a reboot of sw1 loses (prepare_nodes.sh reloads them)
+mods=$(ssh -o BatchMode=yes -o ConnectTimeout=6 sw1 'lsmod | grep -cE "^(bf_kpkt|i2c_i801) "' 2>/dev/null)
+[ "${mods:-0}" = 2 ] && ok "sw1 kernel modules bf_kpkt + i2c_i801 loaded" || warn "sw1 kernel modules missing (${mods:-0}/2 of bf_kpkt, i2c_i801; prepare_nodes.sh loads them, else no port comes up)"
+
 # 4. client-node prerequisites (what prepare_nodes.sh restores)
 chk_client(){ # node nic
   local n=$1 nic=$2 out
-  out=$(ssh -o BatchMode=yes -o ConnectTimeout=6 node$n "printf '%s %s %s %s %s' \$(lsmod | grep -c '^ksched') \$(cat /sys/devices/system/cpu/smt/active 2>/dev/null || echo 1) \$(cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages) \$(ip -br link show $nic 2>/dev/null | awk '{print \$2}') \$(sysctl -n kernel.shm_rmid_forced)" 2>/dev/null)
+  out=$(ssh -o BatchMode=yes -o ConnectTimeout=6 node$n "printf '%s %s %s %s %s %s %s %s' \$(lsmod | grep -c '^ksched') \$(cat /sys/devices/system/cpu/smt/active 2>/dev/null || echo 1) \$(cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages) \$(ip -br link show $nic 2>/dev/null | awk '{print \$2}') \$(sysctl -n kernel.shm_rmid_forced) \$(nproc) \$(awk '/MemTotal/{printf \"%d\", \$2/1048576}' /proc/meminfo) \$(cat /sys/class/net/$nic/mtu 2>/dev/null || echo 0)" 2>/dev/null)
   set -- $out
   [ "${1:-0}" = 1 ] && ok "node$n ksched loaded" || warn "node$n ksched not loaded (prepare_nodes.sh loads it)"
   [ "${2:-1}" = 1 ] && ok "node$n SMT on" || warn "node$n SMT off (prepare_nodes.sh re-enables it; else noht fallback)"
   [ "${3:-0}" -ge 1000 ] && ok "node$n hugepages ${3}" || warn "node$n hugepages ${3:-0} (prepare_nodes.sh reserves them)"
   [ "${4:-}" = UP ] && ok "node$n data NIC $nic UP" || warn "node$n data NIC $nic ${4:-?} (prepare_nodes.sh brings it up)"
   [ "${5:-0}" = 1 ] && ok "node$n iokernel sysctls set" || warn "node$n iokernel sysctls unset (prepare_nodes.sh sets them)"
+  if [ "$n" != 7 ]; then
+    { [ "${6:-0}" -ge 16 ] && [ "${7:-0}" -ge 32 ]; } && ok "node$n shape ${6} CPUs / ${7} GB" || fail "node$n booted with a reduced shape (${6:-?} CPUs / ${7:-?} GB) - cannot drive load; needs a reboot with its full configuration"
+  fi
+  [ "${8:-0}" -ge 9000 ] && ok "node$n data NIC MTU ${8}" || warn "node$n data NIC MTU ${8:-?} (prepare_nodes.sh sets 9000; jumbo responses need it)"
 }
 chk_client 7 ens85f1np1; chk_client 6 enp179s0; chk_client 5 enp179s0np0
 for n in 5 6; do
