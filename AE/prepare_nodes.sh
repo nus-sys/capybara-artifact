@@ -43,6 +43,18 @@ if [ "$N" != 7 ] && [ "$(cat /sys/devices/system/cpu/smt/control 2>/dev/null)" =
     echo "node$N: SMT re-enabled ($(nproc) threads)"
 fi
 
+# capacity: the load generators need the full machine (40 threads, >=5192 hugepages).
+# A boot with a reduced shape (e.g. nr_cpus=4 mem=11G from a lab-mate's GRUB drop-in)
+# cannot drive the servers; fail here with a clear message instead of measuring garbage.
+if [ "$N" != 7 ]; then
+  CPUS=$(nproc); MEMG=$(awk '/MemTotal/{printf "%d", $2/1048576}' /proc/meminfo)
+  if [ "$CPUS" -lt 16 ] || [ "$MEMG" -lt 32 ]; then
+    echo "node$N: booted with only $CPUS CPUs / ${MEMG} GB RAM (cmdline: $(tr ' ' '\n' </proc/cmdline | grep -E 'nr_cpus|mem=|nosmt' | paste -sd' '))"
+    echo "node$N: cannot act as a load generator until it is rebooted with its full shape -- please tell the authors"
+    exit 1
+  fi
+fi
+
 # ksched: a module built for exactly this kernel
 if ! lsmod | grep -q '^ksched'; then
   KO=$KO_DIR/$KREL/ksched.ko
