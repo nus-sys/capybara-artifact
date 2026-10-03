@@ -77,7 +77,10 @@ if [ "$N" != 7 ]; then
   [ "$cur" -ge 5192 ] || echo 5192 | sudo tee /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages >/dev/null
 fi
 
-# data-plane NIC: link up, address present
+# data-plane NIC: jumbo MTU (the servers send 8960-byte segments; a reboot resets the
+# kernel MTU to 1500 and the kernel-path figures then hang after the handshake), link up,
+# address present
+sudo ip link set "$NIC" mtu 9000 2>/dev/null
 sudo ip link set "$NIC" up
 ip addr show "$NIC" | grep -q "$IP/24" || sudo ip addr add "$IP/24" dev "$NIC"
 
@@ -86,10 +89,10 @@ ip addr show "$NIC" | grep -q "$IP/24" || sudo ip addr add "$IP/24" dev "$NIC"
 for i in 1 2 3 4 5 6 7 8; do
   [ "$(ip -br link show "$NIC" | awk '{print $2}')" = UP ] && break; sleep 1
 done
-printf "node%s ok: kernel=%s ksched=%s hugepages=%s nic=%s %s\n" "$N" "$KREL" \
+printf "node%s ok: kernel=%s ksched=%s hugepages=%s nic=%s %s mtu=%s\n" "$N" "$KREL" \
   "$(lsmod | grep -c '^ksched')" \
   "$(cat /sys/devices/system/node/node*/hugepages/hugepages-2048kB/nr_hugepages | paste -sd/)" \
-  "$NIC" "$(ip -br link show "$NIC" | awk '{print $2}')"
+  "$NIC" "$(ip -br link show "$NIC" | awk '{print $2}')" "$(cat /sys/class/net/$NIC/mtu 2>/dev/null)"
 EOF
 PREP=${PREP//__KO_DIR__/$KO_DIR}
 
