@@ -405,28 +405,27 @@ FIG13_SERVERS = [1, 2, 4, 8, 12]
 
 
 def fig13(res_path, paper_csv, out):
-    """RES fig13 servers=<N> ... peak_rps=<r> lines -> the paper's
+    """RES fig13 hw|sw servers=<N> ... peak_rps=<r> lines -> the paper's
     server_scalability_openloop_l4.csv layout (rows 1/2/4/8/12 servers; columns
-    LWRR, Capybara, Capybara-SW; the plot drops LWRR). Only the Capybara (hardware
-    switch) column is measured here; the Capybara-SW column is left empty."""
-    got = {}
+    LWRR, Capybara, Capybara-SW; the plot drops the LWRR column)."""
+    got = {'hw': {}, 'sw': {}}
     for line in open(res_path):
-        m = re.search(r'servers=(\d+) .*peak_rps=(\d+)', line)
+        m = re.search(r'RES fig13 (hw|sw) servers=(\d+) .*peak_rps=(\d+)', line)
         if m:
-            got[int(m.group(1))] = int(m.group(2))
+            got[m.group(1)][int(m.group(2))] = int(m.group(3))
     paper = {}
     for i, l in enumerate(l for l in open(paper_csv) if l.strip()):
         paper[FIG13_SERVERS[i]] = [float(x) for x in l.strip().split(',')]
     ws, data = workspace()
     with open(f'{data}/server_scalability_openloop_l4.csv', 'w') as f:
         for n in FIG13_SERVERS:
-            v = got.get(n)
-            f.write(f"0,{v if v is not None else 'nan'},nan\n")
-    print('--- peak requests/s, paper vs ours (Capybara, hardware switch)')
+            hw = got['hw'].get(n); sw = got['sw'].get(n)
+            f.write(f"0,{hw if hw is not None else 'nan'},{sw if sw is not None else 'nan'}\n")
+    print('--- peak requests/s (millions), paper vs ours:   Capybara        Capybara-SW')
     for n in FIG13_SERVERS:
-        pv = paper[n][1]; ov = got.get(n)
-        print(f'  {n:>2} servers  {pv/1e6:5.2f} M   {(ov/1e6) if ov else float("nan"):5.2f} M'
-              + ('' if ov else '   (not measured)'))
+        hw = got['hw'].get(n); sw = got['sw'].get(n)
+        f1 = f'{hw/1e6:5.2f}' if hw else '  -  '; f2 = f'{sw/1e6:5.2f}' if sw else '  -  '
+        print(f'  {n:>2} servers   {paper[n][1]/1e6:5.2f} / {f1}      {paper[n][2]/1e6:5.2f} / {f2}')
     render('server_scalability_l4', ws, out)
 
 

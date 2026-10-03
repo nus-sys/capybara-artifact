@@ -1,0 +1,22 @@
+--- /homes/inho/Capybara/capybara-fig13sw/src/rust/inetstack/protocols/tcp/peer.rs.orig	2026-10-04 03:29:14.095199578 +0800
++++ /homes/inho/Capybara/capybara-fig13sw/src/rust/inetstack/protocols/tcp/peer.rs	2026-10-04 03:29:39.083200769 +0800
+@@ -199,7 +199,7 @@
+     listening_port: u16,
+ 
+     #[cfg(feature = "capybara-switch")]
+-    backend_servers: arrayvec::ArrayVec<SocketAddrV4, 4>,
++    backend_servers: arrayvec::ArrayVec<SocketAddrV4, 8>,
+ 
+     #[cfg(feature = "capybara-switch")]
+     migration_directory: HashMap<SocketAddrV4, SocketAddrV4>,
+@@ -680,6 +680,10 @@
+             SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 9), 10001),
+             SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 9), 10002),
+             SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 9), 10003),
++            SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 10), 10000),
++            SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 10), 10001),
++            SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 10), 10002),
++            SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 10), 10003),
+         ]);
+ 
+         let mut rng: SmallRng = SmallRng::from_seed(rng_seed);
