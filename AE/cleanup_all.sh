@@ -13,7 +13,7 @@ done
 
 step "servers + dpdk-ctrl (node8/9/10)"
 for N in 8 9 10; do
-  ssh -o ConnectTimeout=5 node$N "sudo pkill -INT -x http-server.elf 2>/dev/null; sudo pkill -INT -x redis-server 2>/dev/null; sleep 1; sudo pkill -x http-server.elf 2>/dev/null; sudo pkill -x redis-server 2>/dev/null; sudo pkill -x dpdk-ctrl.elf 2>/dev/null; for s in hs0 hs1 hs2 hs3 f8s0 f8s1 f9s0 f9s1 dc8 dc9 dc10; do tmux kill-session -t \$s 2>/dev/null; done; true" >/dev/null 2>&1 &
+  ssh -o ConnectTimeout=5 node$N "sudo pkill -INT -x http-server.elf 2>/dev/null; [ $N = 9 ] && sudo pkill -INT -x redis-server 2>/dev/null; sleep 1; sudo pkill -x http-server.elf 2>/dev/null; [ $N = 9 ] && sudo pkill -x redis-server 2>/dev/null; sudo pkill -x dpdk-ctrl.elf 2>/dev/null; for s in hs0 hs1 hs2 hs3 f8s0 f8s1 f9s0 f9s1 dc8 dc9 dc10; do tmux kill-session -t \$s 2>/dev/null; done; true" >/dev/null 2>&1 &
 done
 wait
 
