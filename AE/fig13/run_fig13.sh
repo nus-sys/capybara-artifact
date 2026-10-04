@@ -35,7 +35,13 @@ OUT=$D/results_fig13.txt
 : > $OUT
 
 # ---------------------------------------------------------------- Capybara (hardware switch)
-hw_ladder(){ local n=$1 r; for per in 400000 480000 560000 640000; do r=$((n * per)); [ $r -gt 7500000 ] && r=7500000; echo $r; done | sort -nu; }
+# Peak = the highest achieved rate with p99 under the limit while the achieved rate still
+# grows with the offered load (>2% over the previous rung). The offered/achieved ratio is
+# not a criterion: the load generators' timer-paced send threads skip part of their
+# schedule as "late" at low per-client rates (10-25% on node5/6), which is a client
+# property, not server saturation; a rung whose achieved rate falls below 70% of the
+# offered one (clients collapsing under connect timeouts) ends the ladder.
+hw_ladder(){ local n=$1 r; for per in 400000 480000 560000 640000 720000 800000; do r=$((n * per)); [ $r -gt 7500000 ] && r=7500000; echo $r; done | sort -nu; }
 if [ "${SKIP_HW:-0}" = 1 ]; then NS_HW=""; else NS_HW="$NS"; step "Capybara (hardware switch): Fig 10 bring-up"; bash $F10/fig10_bringup.sh || { echo "FATAL: bring-up failed"; exit 1; }; fi
 for N in $NS_HW; do
   step "hw: N=$N servers"
@@ -46,7 +52,7 @@ for N in $NS_HW; do
       L=$(SPREAD=top$N RT=3 bash $F10/run_fig10_one.sh SOLO $SZ $RPS 2>&1 | grep "^RES" | tail -1)
       ACH=$(echo "$L" | awk '{print $5+0}'); P99=$(echo "$L" | grep -oE "p99=[0-9]+" | cut -d= -f2)
       echo "  $L"
-      if [ -n "$P99" ] && [ "$P99" -le "$P99_LIMIT" ] && [ $((ACH * 10)) -ge $((RPS * 9)) ]; then OKR=1; BEST=$ACH; BESTP=$P99; break; fi
+      if [ -n "$P99" ] && [ "$P99" -gt 0 ] && [ "$P99" -le "$P99_LIMIT" ] && [ $((ACH * 100)) -gt $((BEST * 102)) ] && [ $((ACH * 10)) -ge $((RPS * 7)) ]; then OKR=1; BEST=$ACH; BESTP=$P99; break; fi
     done
     [ $OKR = 1 ] || break
   done
@@ -55,9 +61,7 @@ done
 bash ~/capybara-AE-runs/cleanup_all.sh >/dev/null 2>&1
 
 # ---------------------------------------------------------------- Capybara-SW (software switch on node7)
-# SW peak: the highest achieved rate with p99 under the limit; the ladder stops when p99
-# exceeds it or the achieved rate stops growing (the two load generators deliver ~90% of
-# their nominal schedule, so the offered/achieved ratio is not used as a criterion here)
+# SW column: same peak rule; the ladder is denser around the software switch's limit
 sw_ladder(){ if [ $1 = 1 ]; then echo "300000 400000 500000 600000 700000 800000"; else echo "500000 700000 850000 1000000 1150000 1300000 1500000"; fi; }
 if [ "$SKIP_SW" = 1 ]; then NS_SW=""; else NS_SW="$NS"; step "Capybara-SW: bring-up (plain L2 switch program, software switch on node7, clients node5/6)"; bash $D/fig13_sw_bringup.sh || { echo "FATAL: SW bring-up failed"; exit 1; }; fi
 for N in $NS_SW; do
@@ -69,7 +73,7 @@ for N in $NS_SW; do
       L=$(DATA_SIZE=$SZ bash $D/run_fig13_sw_one.sh $N $RPS 2>&1 | grep "^RES" | tail -1)
       ACH=$(echo "$L" | awk '{print $5+0}'); P99=$(echo "$L" | grep -oE "p99=[0-9]+" | cut -d= -f2)
       echo "  $L"
-      if [ -n "$P99" ] && [ "$P99" -gt 0 ] && [ "$P99" -le "$P99_LIMIT" ] && [ $((ACH * 100)) -gt $((BEST * 102)) ]; then OKR=1; BEST=$ACH; BESTP=$P99; break; fi
+      if [ -n "$P99" ] && [ "$P99" -gt 0 ] && [ "$P99" -le "$P99_LIMIT" ] && [ $((ACH * 100)) -gt $((BEST * 102)) ] && [ $((ACH * 10)) -ge $((RPS * 7)) ]; then OKR=1; BEST=$ACH; BESTP=$P99; break; fi
     done
     [ $OKR = 1 ] || break
   done

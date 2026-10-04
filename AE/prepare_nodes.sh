@@ -34,6 +34,13 @@ sudo sysctl -q -w kernel.shm_rmid_forced=1 kernel.shmmax=18446744073692774399 \
   vm.hugetlb_shm_group=27 vm.max_map_count=16777216 net.core.somaxconn=3072
 sudo modprobe msr 2>/dev/null
 
+# CPU frequency: the load generators' send threads are timer-paced with a 5 us slack;
+# with the schedutil governor node5/6 sit at their 2.8 GHz base and skip 15-25% of the
+# schedule as "late" (seen 2026-10-04). node7 boots with `performance`; make 5/6 match.
+for c in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+  [ "$(cat $c 2>/dev/null)" = performance ] || echo performance | sudo tee $c >/dev/null 2>&1
+done
+
 # SMT: the load generators were calibrated with hyperthreading on (node5/6: 40
 # threads). A `nosmt` boot option leaves the control file at "off", which can be
 # switched back at runtime; "forceoff"/"notsupported" cannot, and the runners then
@@ -89,10 +96,10 @@ ip addr show "$NIC" | grep -q "$IP/24" || sudo ip addr add "$IP/24" dev "$NIC"
 for i in 1 2 3 4 5 6 7 8; do
   [ "$(ip -br link show "$NIC" | awk '{print $2}')" = UP ] && break; sleep 1
 done
-printf "node%s ok: kernel=%s ksched=%s hugepages=%s nic=%s %s mtu=%s\n" "$N" "$KREL" \
+printf "node%s ok: kernel=%s ksched=%s hugepages=%s nic=%s %s mtu=%s governor=%s\n" "$N" "$KREL" \
   "$(lsmod | grep -c '^ksched')" \
   "$(cat /sys/devices/system/node/node*/hugepages/hugepages-2048kB/nr_hugepages | paste -sd/)" \
-  "$NIC" "$(ip -br link show "$NIC" | awk '{print $2}')" "$(cat /sys/class/net/$NIC/mtu 2>/dev/null)"
+  "$NIC" "$(ip -br link show "$NIC" | awk '{print $2}')" "$(cat /sys/class/net/$NIC/mtu 2>/dev/null)" "$(cat /sys/devices/system/cpu/cpu2/cpufreq/scaling_governor 2>/dev/null)"
 EOF
 PREP=${PREP//__KO_DIR__/$KO_DIR}
 

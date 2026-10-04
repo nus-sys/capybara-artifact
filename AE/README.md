@@ -36,7 +36,7 @@ it finishes (or when its deadman watchdog fires).
 | Fig 11 | Capybara-L7 scales **~25-33 -> ~87-93 Gbps** (1->4 backends); proxy flat ~18 Gbps | linear vs flat |
 | Fig 14 | zero-state migration **~10 us TCP / ~12 us TLS** end-to-end (<15 us) | <15 us |
 | Fig 15 | one connection at **~4.2-4.8 Gbps (1 KB) / ~26 Gbps (16 KB) / ~34 Gbps (64 KB)** with no loss up to 100-1,000 mig/s; at 10,000 mig/s 1 KB loses ~40% and large responses about half | 4.5 / 26.9 / 33.1 Gbps; same drops |
-| Fig 13 | Capybara peak **~0.6 M -> ~2.2 M -> ~6.7 M req/s** for 1 -> 4 -> 12 servers (client-bound at 12); Capybara-SW **~0.6 M -> ~0.87 M -> ~0.87 M** (flat, switch-bound) | 0.54 / 2.60 / 8.36 M; SW 0.50 / 0.96 / 0.96 M |
+| Fig 13 | Capybara peak **~0.55 M -> ~2.2 M -> ~6.7 M req/s** for 1 -> 4 -> 12 servers (client-bound at 12); Capybara-SW **~0.57 M -> ~0.86 M -> ~0.9-1.0 M** (flat, switch-bound) | 0.54 / 2.60 / 8.36 M; SW 0.50 / 0.96 / 0.96 M |
 
 Exact run-to-run numbers vary a few percent (client turbo drift); the gaps above
 are what matters. If a cell is far off, re-run that figure once on a rested
