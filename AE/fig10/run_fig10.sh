@@ -32,5 +32,5 @@ step "Sweeping LWRR / Capybara / Uniform x 1, 4, 8, 16, 20 KB ($MODE mode)"
 bash $D/fig10_sweep_final.sh "$MODE" LWRR CAPY UNI 2>&1
 
 step "Generating figure"
-cd $D && python3 /homes/sigcomm26ae/capybara-AE-runs/paperplot/paper_style.py fig10 $D/fig10_results_mss8960.txt $D/fig10_reproduction
+cd $D && python3 ~/capybara-AE-runs/paperplot/paper_style.py fig10 $D/fig10_results_mss8960.txt $D/fig10_reproduction
 step "DONE. Figure: $D/fig10_reproduction.png (+ .pdf), raw: $D/fig10_results_mss8960.txt"

@@ -50,5 +50,5 @@ for KB in 0 16 32 64 128; do
 done
 
 step "Figure"
-cd $D && python3 /homes/sigcomm26ae/capybara-AE-runs/paperplot/paper_style.py fig14 $HOME/capybara-data $D/paper_ref $D/fig14_reproduction
+cd $D && python3 ~/capybara-AE-runs/paperplot/paper_style.py fig14 $HOME/capybara-data $D/paper_ref $D/fig14_reproduction
 step "DONE. Figure: $D/fig14_reproduction.png (+ .pdf)"

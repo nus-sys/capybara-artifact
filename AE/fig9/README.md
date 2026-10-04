@@ -10,7 +10,7 @@ LWRR vs Capybara.
 SSH to **node7**, then:
 
 ```bash
-bash ~/capybara-AE-runs/fig9/run_fig9.sh     # ~6 min end-to-end
+bash ~/capybara-AE-runs/fig9/run_fig9.sh     # ~10 min end-to-end
 ```
 
 ## Output
@@ -34,10 +34,14 @@ Capybara curve is dominated by the one or two hottest connections of the Zipf-1.
 By design, Capybara relieves an overloaded server by migrating connections *other than* the
 hottest ones (the proactive policy moves small connections; `MIG_CONN_RPS_CAP`), so when a
 load shift overloads the server that holds the hottest connection, that connection sees
-1–10 ms latencies for a few hundred milliseconds until the rebalancing catches up. In a
-typical run ~80% of all requests above 1 ms belong to that single connection, and excluding
-it the p99 is ~200–250 µs. Whether and for how long such an episode occurs varies from run
-to run, which is why the table above gives a range. LWRR shows the same two hot connections
+1–10 ms latencies for a few hundred milliseconds until the rebalancing catches up. The
+connection in question is always the same one (client port 400, the first of the 100
+connections, which the seeded Zipf schedule makes the hottest): in every run we have looked at
+it carries ~80% of all requests above 1 ms, and excluding it the p99 is ~220–370 µs with the
+tail ending at 1–2 ms. How long its episodes last varies from run to run (p99 0.38–0.47 ms,
+p99.9 3–7 ms in our runs; the paper's run is at the favorable end), which is why the table
+above gives a range. The LWRR–Capybara gap at p99 (20–120×, paper 74×) and the curve shapes
+are the claim this figure supports. LWRR shows the same two hot connections
 with no relief, which is the ~10 ms tail. The workload spec is REGENERATED from the paper's
 seeded generator (`gen/loadshift_spec.txt`, seed 2402271237 + the 2024 config parameters
 recovered from the experiment history) — byte-identical to the paper runs' offered load.

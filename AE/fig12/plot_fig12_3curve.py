@@ -10,7 +10,7 @@ usage: plot_fig12_3curve.py <fig12_dir> <out_basename>
 import os, re, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 for _lib in (os.path.join(os.path.dirname(HERE), 'pyenv-lib'),
-             '/homes/sigcomm26ae/capybara-AE-runs/pyenv-lib'):
+             os.path.expanduser('~/capybara-AE-runs/pyenv-lib'), '/homes/inho/capybara-AE-runs/pyenv-lib'):
     if os.path.isdir(_lib):
         sys.path.insert(1, _lib); break
 sys.path.insert(0, os.path.join(os.path.dirname(HERE),"paperplot"))

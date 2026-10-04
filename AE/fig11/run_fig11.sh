@@ -113,4 +113,4 @@ tmux kill-session -t wdog 2>/dev/null
 bash ~/capybara-AE-runs/cleanup_all.sh 2>&1 | tail -1
 step "DONE — compare against the table in fig11/README.md"
 # figure (paper-style, this run's data only)
-python3 /homes/sigcomm26ae/capybara-AE-runs/paperplot/paper_style.py fig11 $D/results_closed_capy.txt $D/results_closed_prismstar.txt $D/results_closed_proxy.txt $D/fig11_reproduction
+python3 ~/capybara-AE-runs/paperplot/paper_style.py fig11 $D/results_closed_capy.txt $D/results_closed_prismstar.txt $D/results_closed_proxy.txt $D/fig11_reproduction

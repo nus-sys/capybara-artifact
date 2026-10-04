@@ -111,5 +111,5 @@ done
 
 # ---------------- plot ----------------
 step "Generating figure"
-python3 /homes/sigcomm26ae/capybara-AE-runs/paperplot/paper_style.py fig7 $RES $D/fig7_reproduction || { echo "plot failed — results are in $RES"; exit 1; }
+python3 ~/capybara-AE-runs/paperplot/paper_style.py fig7 $RES $D/fig7_reproduction || { echo "plot failed — results are in $RES"; exit 1; }
 step "DONE. Figure: $D/fig7_reproduction.png (+ .pdf), raw data: $RES"

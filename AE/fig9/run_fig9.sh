@@ -46,5 +46,5 @@ for C in LWRR CAPY; do
 done
 
 step "Generating figure"
-cd $D && python3 /homes/sigcomm26ae/capybara-AE-runs/paperplot/paper_style.py fig9 fig9LWRR-run1 fig9CAPY-run1 $D/fig9_reproduction
+cd $D && python3 ~/capybara-AE-runs/paperplot/paper_style.py fig9 fig9LWRR-run1 fig9CAPY-run1 $D/fig9_reproduction
 step "DONE. Figure: $D/fig9_reproduction.png (+ .pdf)"

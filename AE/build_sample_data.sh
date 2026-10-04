@@ -3,7 +3,7 @@
 # reviewer can regenerate every figure WITHOUT running any experiment (and
 # without touching the cluster). Run as inho on node7.
 set -e
-K=/homes/sigcomm26ae/capybara-AE-runs
+K=${K:-$HOME/capybara-AE-runs}
 D=/homes/inho/capybara-data
 S=$K/sample-data
 mkdir -p $S/fig7 $S/fig8 $S/fig9 $S/fig10 $S/fig11 $S/fig14 $S/fig14/paper_ref
