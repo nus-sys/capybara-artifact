@@ -21,20 +21,27 @@ for s in sw bft swset swov swov2 pktgen baseline blcfg rdr p4b bx insp pcnt; do 
 sudo pkill -x bf_switchd 2>/dev/null
 for i in $(seq 1 40); do pgrep -x bf_switchd >/dev/null || break; sleep 1; done
 if pgrep -x bf_switchd >/dev/null; then sudo pkill -9 -x bf_switchd 2>/dev/null; sleep 4; fi
-for attempt in 1 2; do
+sleep 3   # let the kernel driver release the device after the old daemon is gone
+for attempt in 1 2 3; do
   sudo rm -f "$LOG" 2>/dev/null
   tmux new-session -d -s "$SESS" "source /home/singtel/tools/set_sde.bash; $SDE/run_switchd.sh -p $PROG > $LOG 2>&1"
-  for i in $(seq 1 60); do
+  for i in $(seq 1 90); do
     grep -q "bfruntime gRPC server started" "$LOG" 2>/dev/null && exit 0
     grep -q "kernel packet module master initialization failed" "$LOG" 2>/dev/null && break
-    pgrep -x bf_switchd >/dev/null || break
+    # the daemon is exec'd by run_switchd.sh a few seconds in; only after that is a
+    # missing bf_switchd process a failure
+    [ $i -gt 6 ] && ! pgrep -x bf_switchd >/dev/null && break
     sleep 2
   done
   echo "switchd ($PROG) attempt $attempt failed: $(grep -aE 'ERROR|rror' "$LOG" 2>/dev/null | tail -1 | cut -c1-120)"
   tmux kill-session -t "$SESS" 2>/dev/null; sudo pkill -9 -x bf_switchd 2>/dev/null; sleep 4
   echo "reloading the bf_kpkt kernel module"
-  sudo $SDE/install/bin/bf_kpkt_mod_unload $SDE/install >/dev/null 2>&1; sleep 2
-  sudo $SDE/install/bin/bf_kpkt_mod_load $SDE/install >/dev/null 2>&1; sleep 3
+  sudo $SDE/install/bin/bf_kpkt_mod_unload $SDE/install >/dev/null 2>&1; sleep 3
+  sudo $SDE/install/bin/bf_kpkt_mod_load $SDE/install >/dev/null 2>&1
+  # the device needs time to settle after a reload; a daemon started a few seconds
+  # after it stalls before its gRPC server (seen 2026-10-04 14:01)
+  for i in $(seq 1 20); do dmesg 2>/dev/null | tail -20 | grep -q "PCI-MAC is up" && break; sleep 2; done
+  sleep 30
 done
 echo "switchd ($PROG) did not come up; see sw1:$LOG"
 exit 1
