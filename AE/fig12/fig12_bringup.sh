@@ -5,9 +5,7 @@
 # era http-server (listen backlog 1M) on node8/9/10, 4 per node, DATA_SIZE 256.
 # usage: fig12_bringup.sh   (switch + servers; smoke separately)
 T=/homes/inho/Capybara/capybara-fig12
-ssh sw1 'for s in sw bft swset swov swov2 pktgen baseline blcfg rdr p4b; do tmux kill-session -t $s 2>/dev/null; done; sudo pkill -x bf_switchd 2>/dev/null; true' >/dev/null 2>&1
-sleep 2
-ssh sw1 'rm -f /tmp/ae-switchd.log; tmux new-session -d -s sw "source /home/singtel/tools/set_sde.bash; /home/singtel/bf-sde-9.4.0/run_switchd.sh -p capybara_switch_fe_src_rewriting_by_server > /tmp/ae-switchd.log 2>&1"' >/dev/null 2>&1
+bash ~/capybara-AE-runs/switch_restart.sh capybara_switch_fe_src_rewriting_by_server || { echo "FATAL: switchd failed"; exit 1; }
 for i in $(seq 1 30); do ssh sw1 'grep -q "bfruntime gRPC server started" /tmp/ae-switchd.log 2>/dev/null' && break; sleep 3; done
 ssh sw1 'pgrep -x bf_switchd >/dev/null' || { echo "FATAL switchd"; exit 1; }
 sleep 2

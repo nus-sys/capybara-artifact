@@ -24,8 +24,7 @@ cleanup(){
   ssh node6 "tmux kill-session -t cl6 2>/dev/null; tmux kill-session -t sf6 2>/dev/null; sudo pkill -x synthetic 2>/dev/null; tmux kill-session -t iok6 2>/dev/null; sudo pkill -x iokerneld 2>/dev/null; true" >/dev/null 2>&1
   tmux kill-session -t iok7 2>/dev/null; sudo pkill -x iokerneld 2>/dev/null
   for N in 8 9 10; do ssh node$N "sudo pkill -x http-server.elf 2>/dev/null; sudo pkill -x dpdk-ctrl.elf 2>/dev/null; for p in 0 1 2 3; do tmux kill-session -t hs\$p 2>/dev/null; done; tmux kill-session -t dc$N 2>/dev/null; true" >/dev/null 2>&1 & done; wait
-  ssh sw1 'for s in sw bft swset pktgen; do tmux kill-session -t $s 2>/dev/null; done; sudo pkill -x bf_switchd 2>/dev/null; sleep 3; tmux new-session -d -s baseline "source /home/singtel/tools/set_sde.bash; /home/singtel/bf-sde-9.4.0/run_switchd.sh -p port_forward > /tmp/ae-baseline.log 2>&1"' >/dev/null 2>&1
-  sleep 50
+  bash ~/capybara-AE-runs/switch_restart.sh port_forward baseline /tmp/ae-baseline.log >/dev/null 2>&1; sleep 5
   ssh sw1 'tmux new-session -d -s blcfg "source /home/singtel/tools/set_sde.bash; /home/singtel/bf-sde-9.4.0/run_bfshell.sh -b /home/singtel/inho/Capybara/capybara/p4/port_forward/port_forward.py > /tmp/ae-blcfg.log 2>&1"' >/dev/null 2>&1
   step "Cleanup done (switch back on port_forward baseline)"
 }
@@ -63,9 +62,7 @@ fi
 
 # ---------------- switch bring-up ----------------
 step "Switch: starting main_eval P4 program (takes ~60s)"
-ssh sw1 'for s in sw bft swset pktgen baseline blcfg; do tmux kill-session -t $s 2>/dev/null; done; sudo pkill -x bf_switchd 2>/dev/null; true'
-sleep 3
-ssh sw1 'rm -f /tmp/ae-switchd.log; tmux new-session -d -s sw "source /home/singtel/tools/set_sde.bash; /home/singtel/bf-sde-9.4.0/run_switchd.sh -p main_eval > /tmp/ae-switchd.log 2>&1"'
+bash ~/capybara-AE-runs/switch_restart.sh main_eval || { echo "FATAL: switchd failed"; exit 1; }
 for i in $(seq 1 30); do ssh sw1 'grep -q "bfruntime gRPC server started" /tmp/ae-switchd.log 2>/dev/null' && break; sleep 3; done
 ssh sw1 'pgrep -x bf_switchd >/dev/null' || { echo "FATAL: bf_switchd did not start — see sw1:/tmp/ae-switchd.log"; exit 1; }
 sleep 5

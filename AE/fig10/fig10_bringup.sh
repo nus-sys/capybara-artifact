@@ -8,9 +8,7 @@ step "client nodes 7/6/5: restore reboot-cleared prerequisites (ksched, sysctls,
 bash ~/capybara-AE-runs/prepare_nodes.sh 7 6 5 || { echo "FATAL: client nodes not ready (see above)"; exit 1; }
 
 step "switch: main_eval_fig10"
-ssh sw1 'for s in sw bft swset pktgen baseline blcfg; do tmux kill-session -t $s 2>/dev/null; done; sudo pkill -x bf_switchd 2>/dev/null; true'
-sleep 3
-ssh sw1 'rm -f /tmp/ae-switchd.log; tmux new-session -d -s sw "source /home/singtel/tools/set_sde.bash; /home/singtel/bf-sde-9.4.0/run_switchd.sh -p main_eval_fig10 > /tmp/ae-switchd.log 2>&1"'
+bash ~/capybara-AE-runs/switch_restart.sh main_eval_fig10 || { echo "FATAL: switchd failed"; exit 1; }
 for i in $(seq 1 30); do ssh sw1 'grep -q "bfruntime gRPC server started" /tmp/ae-switchd.log 2>/dev/null' && break; sleep 3; done
 ssh sw1 'pgrep -x bf_switchd >/dev/null' || { echo "FATAL: switchd failed"; exit 1; }
 sleep 5

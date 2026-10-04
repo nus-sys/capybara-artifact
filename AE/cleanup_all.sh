@@ -34,8 +34,9 @@ echo 1568 | sudo tee /sys/devices/system/node/node0/hugepages/hugepages-2048kB/n
 [ "$(cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages)" = "1568" ] || { sleep 3; echo 1568 | sudo tee /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages >/dev/null 2>&1; }
 
 step "switch -> port_forward baseline"
-ssh -o ConnectTimeout=8 sw1 'for s in sw bft swset pktgen p4b bx insp; do tmux kill-session -t $s 2>/dev/null; done; sudo pkill -x bf_switchd 2>/dev/null; sleep 3; sudo rm -f /tmp/ae-baseline.log /tmp/ae-blcfg.log 2>/dev/null; tmux new-session -d -s baseline "source /home/singtel/tools/set_sde.bash; /home/singtel/bf-sde-9.4.0/run_switchd.sh -p port_forward > /tmp/ae-baseline.log 2>&1"' >/dev/null 2>&1
-sleep 50
+ssh -o ConnectTimeout=8 sw1 'sudo rm -f /tmp/ae-baseline.log /tmp/ae-blcfg.log 2>/dev/null' >/dev/null 2>&1
+bash ~/capybara-AE-runs/switch_restart.sh port_forward baseline /tmp/ae-baseline.log || echo "WARNING: the switch did not come back on port_forward (see sw1:/tmp/ae-baseline.log); run cleanup_all.sh again"
+sleep 5
 ssh -o ConnectTimeout=8 sw1 'tmux new-session -d -s blcfg "source /home/singtel/tools/set_sde.bash; /home/singtel/bf-sde-9.4.0/run_bfshell.sh -b /home/singtel/inho/Capybara/capybara/p4/port_forward/port_forward.py > /tmp/ae-blcfg.log 2>&1"' >/dev/null 2>&1
 
 # disarm the watchdog (we cleaned up properly)

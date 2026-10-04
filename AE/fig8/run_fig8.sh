@@ -14,8 +14,7 @@ cleanup(){
   tmux kill-session -t f8c 2>/dev/null; sudo pkill -x synthetic 2>/dev/null
   tmux kill-session -t iok7 2>/dev/null; sudo pkill -x iokerneld 2>/dev/null
   ssh node9 "sudo pkill -INT -x http-server.elf 2>/dev/null; sleep 1; sudo pkill -x http-server.elf 2>/dev/null; sudo pkill -x dpdk-ctrl.elf 2>/dev/null; for p in 0 1; do tmux kill-session -t f8s\$p 2>/dev/null; done; tmux kill-session -t dc9 2>/dev/null; true" >/dev/null 2>&1
-  ssh sw1 'for s in sw bft swset pktgen; do tmux kill-session -t $s 2>/dev/null; done; sudo pkill -x bf_switchd 2>/dev/null; sleep 3; tmux new-session -d -s baseline "source /home/singtel/tools/set_sde.bash; /home/singtel/bf-sde-9.4.0/run_switchd.sh -p port_forward > /tmp/ae-baseline.log 2>&1"' >/dev/null 2>&1
-  sleep 50
+  bash ~/capybara-AE-runs/switch_restart.sh port_forward baseline /tmp/ae-baseline.log >/dev/null 2>&1; sleep 5
   ssh sw1 'tmux new-session -d -s blcfg "source /home/singtel/tools/set_sde.bash; /home/singtel/bf-sde-9.4.0/run_bfshell.sh -b /home/singtel/inho/Capybara/capybara/p4/port_forward/port_forward.py > /tmp/ae-blcfg.log 2>&1"' >/dev/null 2>&1
   step "Cleanup done (switch back on port_forward baseline)"
 }
