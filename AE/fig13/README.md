@@ -11,8 +11,8 @@ caps at about one million requests per second.
 SSH to **node7**, then:
 
 ```bash
-bash ~/capybara-AE-runs/fig13/run_fig13.sh quick   # 1 / 4 / 12 servers, both columns, ~30 min
-bash ~/capybara-AE-runs/fig13/run_fig13.sh         # 1 / 2 / 4 / 8 / 12 servers, ~50 min (the figure)
+bash ~/capybara-AE-runs/fig13/run_fig13.sh quick   # 1 / 4 / 12 servers, both columns, ~35 min
+bash ~/capybara-AE-runs/fig13/run_fig13.sh         # 1 / 2 / 4 / 8 / 12 servers, ~60 min (the figure)
 ```
 
 ## Output

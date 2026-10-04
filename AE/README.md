@@ -22,7 +22,7 @@ it finishes (or when its deadman watchdog fires).
 | Benefits L7 LB; Prism collapses open-loop | Fig 11 | `bash fig11/run_fig11.sh` (or `full`) | ~45 / 70 min |
 | Migration <3 µs CPU, <15 µs e2e; TCP+TLS | Fig 14 | `bash fig14/run_fig14.sh` | ~9 min |
 | Migration overhead stays low at high frequency (added on reviewer request) | Fig 15 | `bash fig15/run_fig15.sh quick` (or `full`) | ~12 / 40 min |
-| Throughput scales linearly with server count; software switch is flat (added on reviewer request) | Fig 13 | `bash fig13/run_fig13.sh quick` (or `full`) | ~30 / 50 min |
+| Throughput scales linearly with server count; software switch is flat (added on reviewer request) | Fig 13 | `bash fig13/run_fig13.sh quick` (or `full`) | ~35 / 60 min |
 
 **What a pass looks like** (the figure and console print these; per-figure
 `figN/README.md` has the full expected tables and tolerances):
@@ -31,7 +31,7 @@ it finishes (or when its deadman watchdog fires).
 |---|---|---|
 | Fig 7  | Capybara p99 ~10-50 us vs LWRR ~19-23 ms under Zipf → **~360-1300x** gap; short flows unharmed | up to 149x |
 | Fig 8  | migrations: **Capybara 4, Reactive ~20, Static 0**; Capybara p99 stays <100 us through the step | qualitative |
-| Fig 9  | Redis p99 **~0.1–0.45 ms (Capybara) vs ~10 ms (LWRR)** → **~20–120x** | ~2 orders |
+| Fig 9  | Redis p99 **~0.2–0.45 ms (Capybara) vs ~10–12 ms (LWRR)** → **~20–60x** | ~2 orders |
 | Fig 10 | Capybara peak **2.6-2.7x** the static baseline at 1/4/8 KB responses | >2x |
 | Fig 11 | Capybara-L7 scales **~25-33 -> ~87-93 Gbps** (1->4 backends); proxy flat ~18 Gbps | linear vs flat |
 | Fig 14 | zero-state migration **~10 us TCP / ~12 us TLS** end-to-end (<15 us) | <15 us |

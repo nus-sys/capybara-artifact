@@ -3,7 +3,7 @@
 # Fig. 13 reproduction — peak throughput vs number of servers, Capybara (Tofino
 # switch) and Capybara-SW (Capybara's software switch on an end host)
 #   Run on node7:  bash ~/capybara-AE-runs/fig13/run_fig13.sh [quick|full]
-#   quick: 1 / 4 / 12 servers (~30 min)      full: 1 / 2 / 4 / 8 / 12 servers (~50 min)
+#   quick: 1 / 4 / 12 servers (~35 min)      full: 1 / 2 / 4 / 8 / 12 servers (~60 min)
 #
 # Capybara column: the Fig 10 switch program (main_eval_fig10, 12 backends on
 # node8/9/10) with the three caladan clients spreading a uniform open-loop load over

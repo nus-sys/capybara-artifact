@@ -25,9 +25,9 @@ bash ~/capybara-AE-runs/fig9/run_fig9.sh     # ~10 min end-to-end
 | | p99 | shape |
 |---|---|---|
 | LWRR | **~10–15 ms** | tracks the paper's LWRR curve closely |
-| Capybara | **~120–450 µs** | same shape as the paper's curve (paper p99 ≈ 108 µs) |
+| Capybara | **~0.2–0.45 ms** | same shape as the paper's curve (paper p99 ≈ 116 µs) |
 
-Ratio 20–120× across runs (paper: 74×).
+Ratio 20–60× across runs (paper: 74×).
 
 **Why Capybara's p99 is above the paper's 116 µs on this testbed.** The top ~1% of the
 Capybara curve is dominated by the one or two hottest connections of the Zipf-1.2 workload.
@@ -37,10 +37,10 @@ load shift overloads the server that holds the hottest connection, that connecti
 1–10 ms latencies for a few hundred milliseconds until the rebalancing catches up. The
 connection in question is always the same one (client port 400, the first of the 100
 connections, which the seeded Zipf schedule makes the hottest): in every run we have looked at
-it carries ~80% of all requests above 1 ms, and excluding it the p99 is ~220–370 µs with the
-tail ending at 1–2 ms. How long its episodes last varies from run to run (p99 0.38–0.47 ms,
+it carries 70–80% of all requests above 1 ms, and excluding it the p99 is ~0.1–0.37 ms with
+the tail ending at 1–2 ms. How long its episodes last varies from run to run (p99 0.2–0.47 ms,
 p99.9 3–7 ms in our runs; the paper's run is at the favorable end), which is why the table
-above gives a range. The LWRR–Capybara gap at p99 (20–120×, paper 74×) and the curve shapes
+above gives a range. The LWRR–Capybara gap at p99 (20–60×, paper 74×) and the curve shapes
 are the claim this figure supports. LWRR shows the same two hot connections
 with no relief, which is the ~10 ms tail. The workload spec is REGENERATED from the paper's
 seeded generator (`gen/loadshift_spec.txt`, seed 2402271237 + the 2024 config parameters
