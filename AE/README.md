@@ -22,7 +22,7 @@ it finishes (or when its deadman watchdog fires).
 | Benefits L7 LB; Prism collapses open-loop | Fig 11 | `bash fig11/run_fig11.sh` (or `full`) | ~45 / 70 min |
 | Migration <3 µs CPU, <15 µs e2e; TCP+TLS | Fig 14 | `bash fig14/run_fig14.sh` | ~9 min |
 | Migration overhead stays low at high frequency (added on reviewer request) | Fig 15 | `bash fig15/run_fig15.sh quick` (or `full`) | ~12 / 40 min |
-| Throughput scales linearly with server count (added on reviewer request) | Fig 13 | `bash fig13/run_fig13.sh quick` (or `full`) | ~15 / 25 min |
+| Throughput scales linearly with server count; software switch is flat (added on reviewer request) | Fig 13 | `bash fig13/run_fig13.sh quick` (or `full`) | ~30 / 50 min |
 
 **What a pass looks like** (the figure and console print these; per-figure
 `figN/README.md` has the full expected tables and tolerances):
@@ -36,7 +36,7 @@ it finishes (or when its deadman watchdog fires).
 | Fig 11 | Capybara-L7 scales **~25-33 -> ~87-93 Gbps** (1->4 backends); proxy flat ~18 Gbps | linear vs flat |
 | Fig 14 | zero-state migration **~10 us TCP / ~12 us TLS** end-to-end (<15 us) | <15 us |
 | Fig 15 | one connection at **~4.2-4.8 Gbps (1 KB) / ~26 Gbps (16 KB) / ~34 Gbps (64 KB)** with no loss up to 100-1,000 mig/s; at 10,000 mig/s 1 KB loses ~40% and large responses about half | 4.5 / 26.9 / 33.1 Gbps; same drops |
-| Fig 13 | peak **~0.6 M -> ~2.2 M -> ~6.7 M req/s** for 1 -> 4 -> 12 servers (client-bound at 12) | 0.54 / 2.60 / 8.36 M |
+| Fig 13 | Capybara peak **~0.6 M -> ~2.2 M -> ~6.7 M req/s** for 1 -> 4 -> 12 servers (client-bound at 12); Capybara-SW **~0.6 M -> ~0.87 M -> ~0.87 M** (flat, switch-bound) | 0.54 / 2.60 / 8.36 M; SW 0.50 / 0.96 / 0.96 M |
 
 Exact run-to-run numbers vary a few percent (client turbo drift); the gaps above
 are what matters. If a cell is far off, re-run that figure once on a rested

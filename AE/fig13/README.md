@@ -11,8 +11,8 @@ caps at about one million requests per second.
 SSH to **node7**, then:
 
 ```bash
-bash ~/capybara-AE-runs/fig13/run_fig13.sh quick   # 1 / 4 / 12 servers, ~25 min
-bash ~/capybara-AE-runs/fig13/run_fig13.sh         # 1 / 2 / 4 / 8 / 12 servers, ~40 min (the figure)
+bash ~/capybara-AE-runs/fig13/run_fig13.sh quick   # 1 / 4 / 12 servers, both columns, ~30 min
+bash ~/capybara-AE-runs/fig13/run_fig13.sh         # 1 / 2 / 4 / 8 / 12 servers, ~50 min (the figure)
 ```
 
 ## Output
@@ -23,25 +23,28 @@ bash ~/capybara-AE-runs/fig13/run_fig13.sh         # 1 / 2 / 4 / 8 / 12 servers,
 
 ## What to expect (AE criterion: same behavior pattern, not exact values)
 
-Capybara (Tofino switch), peak requests/s with p99 under 1 ms, paper / this testbed
-(quick run of 2026-10-04):
+Peak requests/s (millions), paper / this testbed (runs of 2026-10-04):
 
 | servers | 1 | 2 | 4 | 8 | 12 |
 |---|---|---|---|---|---|
-| paper | 0.54 M | 1.20 M | 2.60 M | 5.59 M | 8.36 M |
-| this testbed | **0.55-0.65 M** | ~1.2 M | **2.1-2.6 M** | ~4.5-5.5 M | **6.3-7.0 M** |
+| Capybara, paper | 0.54 | 1.20 | 2.60 | 5.59 | 8.36 |
+| Capybara, this testbed | **0.55-0.65** | ~1.2 | **2.1-2.6** | ~4.5-5.5 | **6.3-7.0** |
+| Capybara-SW, paper | 0.50 | 0.96 | 0.96 | 0.96 | 0.96 |
+| Capybara-SW, this testbed | **0.55-0.60** | ~0.85 | **0.83-0.90** | ~0.85 | **0.83-0.90** |
 
-The pattern to check is the linear growth with the server count. The 12-server cell is
+The pattern to check: Capybara grows linearly with the server count, Capybara-SW is flat
+from a few servers on (its single-core software switch saturates at about 0.9 M requests/s;
+with one server both are bound by that server, ~0.6 M here). The 12-server Capybara cell is
 limited by what the three client machines can offer (about 7 M requests/s at this response
-size), so it lands below the paper's 8.4 M; the 1-, 2- and 4-server cells are server-bound
-and match the paper.
+size), so it lands below the paper's 8.4 M; the 1-, 2- and 4-server cells are server-bound and
+match the paper.
 
-**Capybara-SW column.** The runner contains the software-switch path
-(`fig13_sw_bringup.sh`, `run_fig13_sw_one.sh`; enable with `SKIP_SW=0`), rebuilt from the
-paper-era tree exactly as the 2024 driver ran it, but on the current testbed the software
-switch does not forward connections (its rewritten SYNs never leave node8), so the column is
-not produced by default. The paper's measurement for it is a flat ~0.96 M requests/s from two
-servers on (the single-core switch is the bottleneck), 0.50 M with one server.
+How the peak is determined: the offered load is stepped up rung by rung. For Capybara the cell
+is the highest rung whose p99 stays under 1 ms and whose achieved rate is at least 90% of the
+offered one (the Fig 10 criterion). For Capybara-SW the two load generators deliver about 90%
+of their nominal schedule even when nothing is saturated, so the cell is the highest
+*achieved* rate with p99 under 1 ms; when the software switch saturates, the next rung
+collapses (connections time out) and the ladder stops there.
 
 ## How it works
 
@@ -50,16 +53,21 @@ servers on (the single-core switch is the bottleneck), 0.50 M with one server.
   clients spread a uniform open-loop load over the first N server groups only
   (`gen_spec.py topN`); the offered load is stepped up and the cell's value is the highest
   rung whose p99 stays under 1 ms (the peak criterion used for Fig 10).
-- **Capybara-SW**: the switch runs a plain L2 program (`endhost_switch`); node8 runs
-  `capybara-switch.elf`, Capybara's software switch, on one core. New connections are
-  round-robined over the first N entries of its built-in backend table (node8/9/10 ×
-  ports 10000-10003, the same layout as the hardware setup). The backends are the
-  paper-era tree (`~/Capybara/capybara-fig14tls`, commit `4599b186` of 2024-12-08, the day
-  these measurements were taken for the paper) built with `tcp-migration,capy-time-log`;
-  node8's backends attach to the software switch as DPDK secondaries, node9/10 run their
-  own `dpdk-ctrl`. One open-loop caladan client on node7 with 128 connections steps the
-  offered load; same peak criterion. The 2024 driver (`eval/run_eval.py`,
-  `SERVER_APP = 'capybara-switch'`) and its saved configurations in `~/capybara-data`
-  (2024-12-08) are what this runner follows.
+- **Capybara-SW**: the Tofino runs a plain L2 program (`endhost_switch`): every frame that
+  does not come from node7 is sent to node7, frames from node7 are forwarded by MAC. node7
+  runs Capybara's software switch (`capybara-switch`, one core), which assigns new
+  connections round-robin to the first N entries of its backend table (node8/9/10 × ports
+  10000-10003) and rewrites both directions (client → backend, backend replies → the VIP
+  10.0.1.7:10000). The switch is the paper-era tree (`~/Capybara/capybara-fig13sw`, commit
+  `4599b186` of 2024-12-08, the day these measurements were taken for the paper) built with
+  the `capybara-switch` feature; `patches/capybara-switch-12-backends.diff` is the whole
+  source change on top of that commit (the backend table for this testbed, and two
+  robustness fixes: a retransmitted SYN is sent to the backend that already owns the
+  connection instead of panicking, and packets of unknown connections are dropped instead
+  of panicking). The backends are the Fig 10 server tree without reply rewriting
+  (`~/Capybara/capybara-fig13be`), attached to a `dpdk-ctrl` primary per node that is
+  restarted for every measurement. Two open-loop caladan clients on node5/6 (240 connections
+  each, the Fig 10 client form) share the offered load; node7's NIC belongs to the switch,
+  so it is not a client here.
 - Responses are 256 B. The 12-server Capybara cell is close to what the three clients
   can offer; see the expected-values table.

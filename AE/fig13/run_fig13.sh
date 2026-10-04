@@ -3,21 +3,21 @@
 # Fig. 13 reproduction — peak throughput vs number of servers, Capybara (Tofino
 # switch) and Capybara-SW (Capybara's software switch on an end host)
 #   Run on node7:  bash ~/capybara-AE-runs/fig13/run_fig13.sh [quick|full]
-#   quick: 1 / 4 / 12 servers (~25 min)      full: 1 / 2 / 4 / 8 / 12 servers (~40 min)
+#   quick: 1 / 4 / 12 servers (~30 min)      full: 1 / 2 / 4 / 8 / 12 servers (~50 min)
 #
 # Capybara column: the Fig 10 switch program (main_eval_fig10, 12 backends on
 # node8/9/10) with the three caladan clients spreading a uniform open-loop load over
 # the first N server groups only; the cell's value is the highest offered load whose
 # p99 stays below P99_LIMIT (the paper's peak criterion, as in Fig 10).
 # Capybara-SW column: the switch only forwards (endhost_switch program); Capybara's
-# software switch (capybara-switch.elf, one core on node8) round-robins new
-# connections over N backends; one open-loop client on node7 with 128 connections
-# steps the offered load up; same peak criterion. Both use the paper-era server tree
-# for the SW column and the Fig 10 tree for the hardware column (see README).
+# software switch (capybara-switch, one core on node7) round-robins new connections
+# over N backends on node8/9/10; two open-loop clients (node5/6, 128 connections
+# each) step the offered load up; same peak criterion. The software switch is the
+# paper-era tree, the backends are the Fig 10 server tree (see README).
 # ============================================================================
 set -u
 MODE=${1:-full}
-SKIP_SW=${SKIP_SW:-1}    # default: hardware-switch column only (see README on the software switch)
+SKIP_SW=${SKIP_SW:-0}    # SKIP_SW=1 measures only the hardware-switch column; SKIP_HW=1 only the software-switch column
 D=~/capybara-AE-runs/fig13
 F10=~/capybara-AE-runs/fig10
 SZ=${SZ:-256}
@@ -36,9 +36,8 @@ OUT=$D/results_fig13.txt
 
 # ---------------------------------------------------------------- Capybara (hardware switch)
 hw_ladder(){ local n=$1 r; for per in 400000 480000 560000 640000; do r=$((n * per)); [ $r -gt 7500000 ] && r=7500000; echo $r; done | sort -nu; }
-step "Capybara (hardware switch): Fig 10 bring-up"
-bash $F10/fig10_bringup.sh || { echo "FATAL: bring-up failed"; exit 1; }
-for N in $NS; do
+if [ "${SKIP_HW:-0}" = 1 ]; then NS_HW=""; else NS_HW="$NS"; step "Capybara (hardware switch): Fig 10 bring-up"; bash $F10/fig10_bringup.sh || { echo "FATAL: bring-up failed"; exit 1; }; fi
+for N in $NS_HW; do
   step "hw: N=$N servers"
   BEST=0; BESTP=NA
   for RPS in $(hw_ladder $N); do
@@ -55,20 +54,22 @@ for N in $NS; do
 done
 bash ~/capybara-AE-runs/cleanup_all.sh >/dev/null 2>&1
 
-# ---------------------------------------------------------------- Capybara-SW (software switch on node8)
-sw_ladder(){ if [ $1 = 1 ]; then echo "300000 400000 480000 540000 600000"; else echo "600000 800000 900000 950000 1000000 1050000 1100000"; fi; }
-if [ "$SKIP_SW" = 1 ]; then NS_SW=""; else NS_SW="$NS"; step "Capybara-SW: bring-up (plain L2 switch program, node7 client)"; bash $D/fig13_sw_bringup.sh || { echo "FATAL: SW bring-up failed"; exit 1; }; fi
+# ---------------------------------------------------------------- Capybara-SW (software switch on node7)
+# SW peak: the highest achieved rate with p99 under the limit; the ladder stops when p99
+# exceeds it or the achieved rate stops growing (the two load generators deliver ~90% of
+# their nominal schedule, so the offered/achieved ratio is not used as a criterion here)
+sw_ladder(){ if [ $1 = 1 ]; then echo "300000 400000 500000 600000 700000 800000"; else echo "500000 700000 850000 1000000 1150000 1300000 1500000"; fi; }
+if [ "$SKIP_SW" = 1 ]; then NS_SW=""; else NS_SW="$NS"; step "Capybara-SW: bring-up (plain L2 switch program, software switch on node7, clients node5/6)"; bash $D/fig13_sw_bringup.sh || { echo "FATAL: SW bring-up failed"; exit 1; }; fi
 for N in $NS_SW; do
-  [ "$N" -le 8 ] || { echo "RES fig13 sw servers=$N size=$SZ peak_rps=0 p99=NA note=not-measured(switch-bound-flat-from-2-servers)" | tee -a $OUT; continue; }
   step "sw: N=$N backends"
   BEST=0; BESTP=NA
   for RPS in $(sw_ladder $N); do
     OKR=0
     for attempt in 1 2; do
       L=$(DATA_SIZE=$SZ bash $D/run_fig13_sw_one.sh $N $RPS 2>&1 | grep "^RES" | tail -1)
-      ACH=$(echo "$L" | awk '{print $4+0}'); P99=$(echo "$L" | grep -oE "p99=[0-9]+" | cut -d= -f2)
+      ACH=$(echo "$L" | awk '{print $5+0}'); P99=$(echo "$L" | grep -oE "p99=[0-9]+" | cut -d= -f2)
       echo "  $L"
-      if [ -n "$P99" ] && [ "$P99" -le "$P99_LIMIT" ] && [ $((ACH * 10)) -ge $((RPS * 9)) ]; then OKR=1; BEST=$ACH; BESTP=$P99; break; fi
+      if [ -n "$P99" ] && [ "$P99" -gt 0 ] && [ "$P99" -le "$P99_LIMIT" ] && [ $((ACH * 100)) -gt $((BEST * 102)) ]; then OKR=1; BEST=$ACH; BESTP=$P99; break; fi
     done
     [ $OKR = 1 ] || break
   done

@@ -37,7 +37,7 @@ MIGENV="MAX_REACTIVE_MIGS=0 MAX_PROACTIVE_MIGS=0 SIGNAL_POLICY_MIGS=0 RECV_QUEUE
 # 1) fresh dpdk-ctrl + two backends on node9
 ssh node9 "sudo pkill -INT -x http-server.elf 2>/dev/null; sleep 1; sudo pkill -x http-server.elf 2>/dev/null; for p in 0 1; do tmux kill-session -t f15s\$p 2>/dev/null; done; sudo pkill -x dpdk-ctrl.elf 2>/dev/null; tmux kill-session -t dc9 2>/dev/null; true" >/dev/null 2>&1
 sleep 2
-ssh node9 "tmux new-session -d -s dc9 \"cd $T && MTU=9216 timeout 1200 make PREFIX=/homes/inho dpdk-ctrl-node9 > /tmp/ae-dc9.log 2>&1\"" >/dev/null 2>&1
+ssh node9 "sudo rm -rf /var/run/dpdk/rte 2>/dev/null; tmux new-session -d -s dc9 \"cd $T && MTU=9216 timeout 1200 make PREFIX=/homes/inho dpdk-ctrl-node9 > /tmp/ae-dc9.log 2>&1\"" >/dev/null 2>&1
 sleep 14
 rm -f $D/$ID.be0 $D/$ID.be1
 ssh node9 "cd $T; for p in 0 1; do c=\$((p+1)); tmux new-session -d -s f15s\$p \"cd $T && sudo -E env $MIGENV MIG_DELAY=0 MIG_PER_N=$MIGN CONFIGURED_STATE_SIZE=0 MIN_THRESHOLD=1000000 RPS_THRESHOLD=0.3 THRESHOLD_EPSILON=0.1 CORE_ID=\$c CONFIG_PATH=scripts/config/node9_config.yaml MTU=9000 MSS=8960 NUM_CORES=4 USE_JUMBO=1 LIBOS=catnip DATA_SIZE=$SZ LD_LIBRARY_PATH=\\/homes/inho/lib:\\/homes/inho/lib/x86_64-linux-gnu numactl -m0 bin/examples/rust/http-server.elf 10.0.1.9:1000\$p > $D/$ID.be\$p 2>&1\"; sleep 2; done" >/dev/null 2>&1

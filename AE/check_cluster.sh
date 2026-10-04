@@ -26,6 +26,7 @@ sudo -n true 2>/dev/null && ok "node7 sudo ok" || fail "node7: no passwordless s
 busy=""
 pgrep -x synthetic >/dev/null && busy="$busy node7:synthetic"
 pgrep -x iokerneld >/dev/null && busy="$busy node7:iokerneld"
+pgrep -x capybara-switch >/dev/null && busy="$busy node7:capybara-switch"
 for n in 5 6; do ssh -o BatchMode=yes node$n 'pgrep -x synthetic >/dev/null || pgrep -x iokerneld >/dev/null' 2>/dev/null && busy="$busy node$n:client"; done
 for n in 8 9 10; do ssh -o BatchMode=yes node$n "pgrep -x http-server.elf >/dev/null || { [ $n = 9 ] && pgrep -x redis-server >/dev/null; } || pgrep -x dpdk-ctrl.elf >/dev/null" 2>/dev/null && busy="$busy node$n:server"; done
 [ -z "$busy" ] && ok "no experiment processes running" || warn "leftover processes:$busy  -> bash ~/capybara-AE-runs/cleanup_all.sh"

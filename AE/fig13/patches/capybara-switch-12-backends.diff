@@ -1,0 +1,83 @@
+--- /homes/inho/Capybara/capybara-fig13sw/src/rust/inetstack/protocols/tcp/peer.rs.orig	2026-10-04 03:29:14.095199578 +0800
++++ /homes/inho/Capybara/capybara-fig13sw/src/rust/inetstack/protocols/tcp/peer.rs	2026-10-04 07:54:02.643957203 +0800
+@@ -199,7 +199,7 @@
+     listening_port: u16,
+ 
+     #[cfg(feature = "capybara-switch")]
+-    backend_servers: arrayvec::ArrayVec<SocketAddrV4, 4>,
++    backend_servers: arrayvec::ArrayVec<SocketAddrV4, 12>,
+ 
+     #[cfg(feature = "capybara-switch")]
+     migration_directory: HashMap<SocketAddrV4, SocketAddrV4>,
+@@ -676,10 +676,18 @@
+     ) -> Self {
+         #[cfg(feature = "capybara-switch")]
+         let backend_servers = arrayvec::ArrayVec::from([
++            SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 8), 10000),
+             SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 9), 10000),
++            SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 10), 10000),
++            SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 8), 10001),
+             SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 9), 10001),
++            SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 10), 10001),
++            SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 8), 10002),
+             SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 9), 10002),
++            SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 10), 10002),
++            SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 8), 10003),
+             SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 9), 10003),
++            SocketAddrV4::new(Ipv4Addr::new(10, 0, 1, 10), 10003),
+         ]);
+ 
+         let mut rng: SmallRng = SmallRng::from_seed(rng_seed);
+@@ -898,7 +906,19 @@
+             static mut BE_IDX: usize = 0;
+             capy_log!("SYN");
+ 
+-            let be_sockaddr = self.backend_servers[unsafe { BE_IDX }];
++            // A retransmitted SYN (the SYN-ACK was lost) must go to the backend that
++            // already owns this connection, not to a new one.
++            let be_sockaddr = match self.migration_directory.get(&src_addr) {
++                Some(existing) => *existing,
++                None => {
++                    let b = self.backend_servers[unsafe { BE_IDX }];
++                    unsafe {
++                        BE_IDX = (BE_IDX + 1) % self.num_backends;
++                    }
++                    self.migration_directory.insert(src_addr, b);
++                    b
++                },
++            };
+             let be_mac = match self.arp.try_query(*be_sockaddr.ip()) {
+                 Some(mac) => mac,
+                 None => panic!("MAC of this BE is not cached"),
+@@ -913,9 +933,6 @@
+             tcp_hdr.set_dst_port(be_sockaddr.port());
+             // capy_log!("ETH: {:?}\n\nIP: {:?}\n\nTCP: {:?}\n", eth_hdr, ip_hdr, tcp_hdr);
+ 
+-            if self.migration_directory.insert(src_addr, be_sockaddr).is_some() {
+-                panic!("duplicate queue descriptor in established sockets table");
+-            }
+ 
+             let segment = TcpSegment {
+                 ethernet2_hdr: eth_hdr,
+@@ -926,9 +943,6 @@
+             };
+             self.rt.transmit(Box::new(segment));
+ 
+-            unsafe {
+-                BE_IDX = (BE_IDX + 1) % self.num_backends;
+-            }
+         } else {
+             capy_profile_total!("capybara-switch");
+             let src_matching_addr = self.migration_directory.get(&src_addr);
+@@ -950,8 +964,9 @@
+                     tcp_hdr.set_src_port(10000);
+                     // capy_log!("ETH: {:?}\n\nIP: {:?}\n\nTCP: {:?}\n", eth_hdr, ip_hdr, tcp_hdr);
+                 },
+-                (Some(_), Some(_)) => panic!("Both src and dst are matching in migration directory"),
+-                (None, None) => panic!("No matching entry in migration_directory"),
++                // packets of unknown connections (stale RSTs, late retransmits after a
++                // restart) are dropped instead of taking the switch down
++                (Some(_), Some(_)) | (None, None) => return Ok(()),
+             }
+ 
+             let segment = TcpSegment {
