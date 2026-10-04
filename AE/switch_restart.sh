@@ -6,12 +6,14 @@
 #     tmux-session  default "sw"              (the baseline uses "baseline")
 #     log           default /tmp/ae-switchd.log (the baseline uses /tmp/ae-baseline.log)
 #
-# Exit 0 once the program's bfruntime gRPC server is up; exit 1 otherwise. Why this
-# exists: the previous bf_switchd holds the bf_kpkt kernel device for several seconds
-# after SIGTERM. A new bf_switchd started in that window dies with "kernel packet module
-# master initialization failed" (dmesg: "error registering LLD tx callback") and leaves
-# the switch with no program at all (seen 2026-10-04 13:10 in a reviewer run). So: wait
-# for the old daemon to be gone, start, and if it still fails, reload bf_kpkt and retry.
+# Exit 0 once the program's bfruntime gRPC server listens (port 50052); exit 1 otherwise.
+# Why this exists: the previous bf_switchd holds the bf_kpkt kernel device for several
+# seconds after SIGTERM. A new bf_switchd started in that window dies with "kernel packet
+# module master initialization failed" (dmesg: "error registering LLD tx callback") and
+# leaves the switch with no program at all (seen 2026-10-04 13:10 in a reviewer run). So:
+# wait for the old daemon to be gone, start, and if it still fails, reload bf_kpkt and retry.
+# Readiness is the gRPC port, not the daemon's "bfruntime gRPC server started" line: that
+# line is block-buffered when stdout goes to a file and can appear minutes late.
 set -u
 PROG=$1; SESS=${2:-sw}; LOG=${3:-/tmp/ae-switchd.log}
 ssh -o ConnectTimeout=10 sw1 "bash -s" "$PROG" "$SESS" "$LOG" <<'EOF'
@@ -26,7 +28,7 @@ for attempt in 1 2 3; do
   sudo rm -f "$LOG" 2>/dev/null
   tmux new-session -d -s "$SESS" "source /home/singtel/tools/set_sde.bash; $SDE/run_switchd.sh -p $PROG > $LOG 2>&1"
   for i in $(seq 1 90); do
-    grep -q "bfruntime gRPC server started" "$LOG" 2>/dev/null && exit 0
+    if ss -ltn 2>/dev/null | grep -q ":50052 "; then sleep 2; exit 0; fi
     grep -q "kernel packet module master initialization failed" "$LOG" 2>/dev/null && break
     # the daemon is exec'd by run_switchd.sh a few seconds in; only after that is a
     # missing bf_switchd process a failure
@@ -38,8 +40,7 @@ for attempt in 1 2 3; do
   echo "reloading the bf_kpkt kernel module"
   sudo $SDE/install/bin/bf_kpkt_mod_unload $SDE/install >/dev/null 2>&1; sleep 3
   sudo $SDE/install/bin/bf_kpkt_mod_load $SDE/install >/dev/null 2>&1
-  # the device needs time to settle after a reload; a daemon started a few seconds
-  # after it stalls before its gRPC server (seen 2026-10-04 14:01)
+  # the device needs time to settle after a reload
   for i in $(seq 1 20); do dmesg 2>/dev/null | tail -20 | grep -q "PCI-MAC is up" && break; sleep 2; done
   sleep 30
 done
