@@ -42,16 +42,20 @@ Exact run-to-run numbers vary a few percent (client turbo drift); the gaps above
 are what matters. If a cell is far off, re-run that figure once on a rested
 cluster (see Pacing).
 
-**Total time.** A full fresh reviewer dry-run of all six figures (quick paths,
-with the recommended pacing breaks) takes **about 2.5 h wall-clock**
-(measured end-to-end on 2026-09-22, including the automatic retries). The `full` variants of Figs 7/10/11
-add roughly another hour. Suggested order: `bash check_cluster.sh` (20 s), then
-**Fig 14 (~9 min)** as a smoke test, then Figs 8 and 9 (short), then the heavy ones
-(7, 10, 11) with a break after every second heavy run (see Pacing below).
+**Total time.** A full fresh reviewer dry-run of all eight figures (quick paths,
+with the recommended pacing breaks) takes **about 3.5 h wall-clock**
+(measured end-to-end on 2026-10-10, including the automatic retries). The `full` variants of
+Figs 7/10/11/13 add roughly another 1.5 h. Suggested order: `bash check_cluster.sh` (20 s),
+then **Fig 14 (~9 min)** as a smoke test, then Figs 8, 9 and 15 (short), then the heavy ones
+(7, 13, 10, 11) with a break after every second heavy run (see Pacing below).
 
 Run the long ones inside `tmux` (`tmux new -s ae`, later `tmux attach -t ae`) so a
 dropped SSH connection cannot interrupt a run. If a run is interrupted anyway, it
 cleans up after itself and can simply be started again.
+
+`WALKTHROUGH.pdf` is a screenshot walkthrough of the original six figures; Figs 13 and 15 were
+added later on request and are documented in this file and in `fig13/README.md`,
+`fig15/README.md` only.
 
 Each `figN/` directory contains a short `README.md` with the
 expected numbers, the paper's values, and how the runner works. Runners print
