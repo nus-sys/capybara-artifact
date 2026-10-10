@@ -35,7 +35,7 @@ it finishes (or when its deadman watchdog fires).
 | Fig 10 | Capybara peak **2.6-2.7x** the static baseline at 1/4/8 KB responses | >2x |
 | Fig 11 | Capybara-L7 scales **~25-33 -> ~87-93 Gbps** (1->4 backends); proxy flat ~18 Gbps | linear vs flat |
 | Fig 14 | zero-state migration **~10 us TCP / ~12 us TLS** end-to-end (<15 us) | <15 us |
-| Fig 15 | one connection at **~4.2-4.8 Gbps (1 KB) / ~26 Gbps (16 KB) / ~34 Gbps (64 KB)** with no loss up to 100-1,000 mig/s; at 10,000 mig/s 1 KB loses ~40% and large responses about half | 4.5 / 26.9 / 33.1 Gbps; same drops |
+| Fig 15 | one connection at **~4.2-4.8 Gbps (1 KB) / ~26 Gbps (16 KB) / ~31-35 Gbps (64 KB)** without migration; 1 KB and 64 KB keep their rate up to 100-1,000 mig/s, a migrated 16 KB connection settles at **~20-26 Gbps**; at 10,000 mig/s 1 KB loses ~40% and large responses about half | 4.5 / 26.9 / 33.1 Gbps; same drops |
 | Fig 13 | Capybara peak **~0.55 M -> ~2.2 M -> ~6.7 M req/s** for 1 -> 4 -> 12 servers (client-bound at 12); Capybara-SW **~0.57 M -> 0.83-1.05 M -> 0.83-1.05 M** (flat, switch-bound) | 0.54 / 2.60 / 8.36 M; SW 0.50 / 0.96 / 0.96 M |
 
 Exact run-to-run numbers vary a few percent (client turbo drift); the gaps above
@@ -75,8 +75,9 @@ figure produced -- useful as a preview of what a green run looks like.
 
 ## Plot from sample data (no experiment, no cluster, ~seconds)
 
-Every figure can be regenerated from the sample runs shipped in
-`sample-data/`, without running anything on the cluster:
+The original six figures can be regenerated from the sample runs shipped in
+`sample-data/`, without running anything on the cluster (Figs 13 and 15 have no sample data;
+their expected tables are in their READMEs):
 
 ```
 bash plot_from_samples.sh          # all six figures -> sample-figures/

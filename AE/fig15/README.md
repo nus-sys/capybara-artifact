@@ -44,8 +44,9 @@ Peak throughput of the single connection, Gbps of HTTP response bytes, paper / t
 The pattern to check: the no-migration peaks match the paper for every size; 1, 8, 32 and
 64 KB keep their throughput up to 100-1,000 migrations/s; at 10,000 migrations/s the 1 KB
 connection loses ~40% and the large responses roughly half, as in the paper. One difference
-from the paper: on this testbed a migrated 16 KB connection settles about 25% below its
-no-migration peak at any migration rate (the paper's 16 KB curve stays flat until 1,000/s).
+from the paper: on this testbed a migrated 16 KB connection settles below its no-migration
+peak at any migration rate, by 0-25% depending on the run (quick runs have given 23-26 Gbps,
+this full run 19.6-19.7; the paper's 16 KB curve stays flat until 1,000/s).
 The `migs=` field of each `RES` line is the number of migrations the two backends actually
 performed in that cell (distinct `INIT_MIG` events); at the 10,000/s setting the connection
 reaches a few thousand migrations per second, bounded by the time a migration takes. A single
