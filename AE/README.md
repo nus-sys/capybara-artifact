@@ -43,19 +43,20 @@ run `bash cleanup_all.sh` and then `bash check_cluster.sh` before starting the n
 
 | Figure | Success signal on this testbed | Paper |
 |---|---|---|
-| Fig 7  | Capybara p99 ~10-50 us vs LWRR ~19-23 ms under Zipf → **~360-1300x** gap; short flows unharmed | up to 149x |
+| Fig 7  | Capybara p99 ~10-50 us vs LWRR ~16-23 ms under Zipf → **~360-1300x** gap; short flows unharmed | up to 149x |
 | Fig 8  | migrations: **Capybara 4, Reactive ~20, Static 0**; Capybara p99 stays <100 us through the step | qualitative |
 | Fig 9  | Redis p99 **~0.2–0.45 ms (Capybara) vs ~10–12 ms (LWRR)** → **~20–60x** | ~2 orders |
 | Fig 10 | Capybara peak **2.6-2.7x** the static baseline at 1/4/8 KB responses | >2x |
 | Fig 11 | Capybara-L7 scales **~25-33 -> ~87-93 Gbps** (1->4 backends); proxy flat ~18 Gbps | linear vs flat |
 | Fig 14 | zero-state migration **~10 us TCP / ~12 us TLS** end-to-end (<15 us) | <15 us |
-| Fig 15 | one connection at **~4.2-4.8 Gbps (1 KB) / ~26 Gbps (16 KB) / ~31-35 Gbps (64 KB)** without migration; 1 KB and 64 KB keep their rate up to 100-1,000 mig/s, a migrated 16 KB connection settles at **~20-26 Gbps**; at 10,000 mig/s 1 KB loses ~40% and large responses about half | 4.5 / 26.9 / 33.1 Gbps; same drops |
-| Fig 13 | Capybara peak **~0.55 M -> ~2.2 M -> ~6.7 M req/s** for 1 -> 4 -> 12 servers (client-bound at 12); Capybara-SW **~0.57 M -> 0.83-1.05 M -> 0.83-1.05 M** (flat, switch-bound) | 0.54 / 2.60 / 8.36 M; SW 0.50 / 0.96 / 0.96 M |
+| Fig 15 | one connection at **~4.2-4.8 Gbps (1 KB) / ~22-27 Gbps (16 KB) / ~31-35 Gbps (64 KB)** without migration; 1 KB and 64 KB keep their rate up to 100-1,000 mig/s, a migrated 16 KB connection settles at **~19-26 Gbps**; at 10,000 mig/s 1 KB loses ~40% and large responses about half | 4.5 / 26.9 / 33.1 Gbps; same drops |
+| Fig 13 | Capybara peak **~0.55 M -> ~2.2 M -> ~6.7 M req/s** for 1 -> 4 -> 12 servers (client-bound at 12); Capybara-SW **~0.5-0.6 M -> 0.83-1.05 M -> 0.83-1.05 M** (flat, switch-bound) | 0.54 / 2.60 / 8.36 M; SW 0.50 / 0.96 / 0.96 M |
 
 Exact run-to-run numbers vary a few percent (client turbo drift); the gaps above
 are what matters. A few cells are documented in the per-figure READMEs as varying from run to
-run (the tail above p99 of Fig 9, the 16/20 KB points of Fig 10, the migrated 16 KB row of
-Fig 15). If a cell is far off, re-run that figure once on a rested cluster (see Pacing).
+run (the tail above p99 of Fig 9, the 16/20 KB points of Fig 10, which can even print as 0%
+when every rung of that cell violates the p99 bound, the migrated 16 KB row of Fig 15). If a
+cell is far off, re-run that figure once on a rested cluster (see Pacing).
 
 **Total time.** A full fresh reviewer dry-run of all eight figures (quick paths,
 with the recommended pacing breaks) takes **about 3.5 h wall-clock**

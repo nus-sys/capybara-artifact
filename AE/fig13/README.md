@@ -30,7 +30,7 @@ Peak requests/s (millions), paper / this testbed (full run of 2026-10-04: Capyba
 | Capybara, paper | 0.54 | 1.20 | 2.60 | 5.59 | 8.36 |
 | Capybara, this testbed | **0.50-0.65** | 1.1-1.3 | **2.1-2.6** | 4.3-5.0 | **6.3-7.0** |
 | Capybara-SW, paper | 0.50 | 0.96 | 0.96 | 0.96 | 0.96 |
-| Capybara-SW, this testbed | **0.55-0.60** | 0.83-1.05 | **0.83-1.05** | 0.83-1.05 | **0.83-1.05** |
+| Capybara-SW, this testbed | **0.50-0.60** | 0.83-1.05 | **0.83-1.05** | 0.83-1.05 | **0.83-1.05** |
 
 The pattern to check: Capybara grows linearly with the server count, Capybara-SW is flat
 from two servers on (its single-core software switch saturates at 0.85-1.0 M requests/s;

@@ -37,7 +37,7 @@ Peak throughput of the single connection, Gbps of HTTP response bytes, paper / t
 |---|---|---|---|---|---|---|
 | 1 KB  | 4.5 / **4.3** | 4.5 / **4.3** | 4.5 / **4.3** | 4.5 / **4.3** | 4.4 / **3.4-4.3** | 3.0 / **2.6** |
 | 8 KB  | 17.9 / **17.5** | 18.6 / **18.8** | 18.6 / **19.7** | 17.9 / **13-20** | 17.3 / **19.8** | 15.3 / **13.1** |
-| 16 KB | 26.9 / **26.3** | 26.9 / **19.7** | 26.9 / **19.6** | 26.8 / **19.7** | 26.9 / **19.6** | 19.4 / **15.2** |
+| 16 KB | 26.9 / **22-27** | 26.9 / **19.7** | 26.9 / **19.6** | 26.8 / **19.7** | 26.9 / **19.6** | 19.4 / **15.2** |
 | 32 KB | 32.0 / **31.4** | 31.6 / **31.4** | 31.3 / **31.4** | 31.7 / **31.3** | 18.9 / **21.1** | 14.0 / **21.1** |
 | 64 KB | 33.1 / **34.6** | 33.4 / **34.3** | 32.8 / **34.1** | 33.3 / **33.5** | 24.5 / **30.8** | 14.3 / **18.6** |
 
@@ -45,8 +45,8 @@ The pattern to check: the no-migration peaks match the paper for every size; 1, 
 64 KB keep their throughput up to 100-1,000 migrations/s; at 10,000 migrations/s the 1 KB
 connection loses ~40% and the large responses roughly half, as in the paper. One difference
 from the paper: on this testbed a migrated 16 KB connection settles below its no-migration
-peak at any migration rate, by 0-25% depending on the run (quick runs have given 23-26 Gbps,
-this full run 19.6-19.7; the paper's 16 KB curve stays flat until 1,000/s).
+peak at any migration rate, by 0-25% depending on the run (runs have given anything from
+19.6 to 26 Gbps; the paper's 16 KB curve stays flat until 1,000/s).
 The `migs=` field of each `RES` line is the number of migrations the two backends actually
 performed in that cell (distinct `INIT_MIG` events); at the 10,000/s setting the connection
 reaches a few thousand migrations per second, bounded by the time a migration takes. A single

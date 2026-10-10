@@ -84,7 +84,9 @@ ideal, because under overload the raw completion count keeps rising while latenc
   means the harness, not the servers, was the binding constraint there.
 - **16 / 20 KB Capybara.** Above ~1 M rps (16 KB) and ~650 k rps (20 KB) these cells are
   reproducibly bimodal: p99 either stays at ~35 us or jumps past 20 ms, and the failures recur across
-  retries and across migration-aggressiveness settings (`MIG_CONN_RPS_CAP` 30 and 50). At
+  retries and across migration-aggressiveness settings (`MIG_CONN_RPS_CAP` 30 and 50); when
+  every rung of a cell lands in the bad mode the summary prints 0% for it (seen once for 16 KB
+  in a quick run). The >2x claim rests on the 1/4/8 KB cells, which have never failed. At
   20 KB a response spans three segments, so a migration blackout costs proportionally more
   in-flight data than at any smaller size. Reported as measured.
 
