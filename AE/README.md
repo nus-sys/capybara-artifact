@@ -11,6 +11,20 @@ experiment below is one command from this account, allocates the cluster
 exclusively while it runs, and restores the cluster to a clean baseline when
 it finishes (or when its deadman watchdog fires).
 
+## Quick start
+
+```
+tmux new -s ae
+cd ~/capybara-AE-runs
+bash check_cluster.sh          # ~20 s, read-only; must end with "RESULT: cluster ready"
+bash fig14/run_fig14.sh        # ~9 min smoke test; then the other figures, one at a time
+```
+
+The quick paths of all eight figures take about 3.5 h including the recommended breaks and fit
+a 4-hour slot; the `full` variants (Figs 7/10/11/13) need about 1.5 h more, so ask for a longer
+reservation if you want to run them. If a run is interrupted (for example by an SSH disconnect),
+run `bash cleanup_all.sh` and then `bash check_cluster.sh` before starting the next figure.
+
 ## Claims → experiments
 
 | Claim (from the abstract) | Figure | Command (from `~/capybara-AE-runs/`) | Time |
@@ -39,8 +53,9 @@ it finishes (or when its deadman watchdog fires).
 | Fig 13 | Capybara peak **~0.55 M -> ~2.2 M -> ~6.7 M req/s** for 1 -> 4 -> 12 servers (client-bound at 12); Capybara-SW **~0.57 M -> 0.83-1.05 M -> 0.83-1.05 M** (flat, switch-bound) | 0.54 / 2.60 / 8.36 M; SW 0.50 / 0.96 / 0.96 M |
 
 Exact run-to-run numbers vary a few percent (client turbo drift); the gaps above
-are what matters. If a cell is far off, re-run that figure once on a rested
-cluster (see Pacing).
+are what matters. A few cells are documented in the per-figure READMEs as varying from run to
+run (the tail above p99 of Fig 9, the 16/20 KB points of Fig 10, the migrated 16 KB row of
+Fig 15). If a cell is far off, re-run that figure once on a rested cluster (see Pacing).
 
 **Total time.** A full fresh reviewer dry-run of all eight figures (quick paths,
 with the recommended pacing breaks) takes **about 3.5 h wall-clock**
