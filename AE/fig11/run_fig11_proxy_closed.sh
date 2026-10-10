@@ -14,7 +14,7 @@ DS=131072
 bash ~/capybara-AE-runs/fig11/fig11_bringup_prism.sh >/dev/null 2>&1
 
 start_servers () {
-  for N in 8 9; do ssh node$N "sudo pkill -x proxy-server-fe.elf 2>/dev/null; sudo pkill -x proxy-server-be.elf 2>/dev/null; true" >/dev/null 2>&1; done
+  for N in 8 9; do ssh node$N "sudo pkill -x proxy-server-fe 2>/dev/null; sudo pkill -x proxy-server-be 2>/dev/null; true" >/dev/null 2>&1; done
   sleep 2
   # dpdk-ctrl only if not already up
   for N in 8 9; do

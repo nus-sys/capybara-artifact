@@ -29,6 +29,7 @@ pgrep -x iokerneld >/dev/null && busy="$busy node7:iokerneld"
 pgrep -x capybara-switch >/dev/null && busy="$busy node7:capybara-switch"
 for n in 5 6; do ssh -o BatchMode=yes node$n 'pgrep -x synthetic >/dev/null || pgrep -x iokerneld >/dev/null' 2>/dev/null && busy="$busy node$n:client"; done
 for n in 8 9 10; do ssh -o BatchMode=yes node$n "pgrep -x http-server.elf >/dev/null || { [ $n = 9 ] && pgrep -x redis-server >/dev/null; } || pgrep -x dpdk-ctrl.elf >/dev/null" 2>/dev/null && busy="$busy node$n:server"; done
+for n in 8 9; do ssh -o BatchMode=yes node$n "pgrep -x proxy-server-fe >/dev/null || pgrep -x proxy-server-be >/dev/null || pgrep -x prism-fe.elf >/dev/null || pgrep -x prism-be-http.e >/dev/null || pgrep -x capy-proxy-fe.e >/dev/null || pgrep -x capy-proxy-be.e >/dev/null" 2>/dev/null && busy="$busy node$n:fig11-L7"; done
 [ -z "$busy" ] && ok "no experiment processes running" || warn "leftover processes:$busy  -> bash ~/capybara-AE-runs/cleanup_all.sh"
 
 # 3. switch on the idle baseline

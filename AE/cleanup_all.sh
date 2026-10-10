@@ -19,7 +19,7 @@ wait
 
 step "fig11 L7 binaries (node8/9)"
 for N in 8 9; do
-  ssh -o ConnectTimeout=5 node$N "sudo pkill -INT -x capy-proxy-fe.e 2>/dev/null; sudo pkill -INT -x capy-proxy-be.e 2>/dev/null; sleep 1; sudo pkill -9 -x capy-proxy-fe.e 2>/dev/null; sudo pkill -9 -x capy-proxy-be.e 2>/dev/null; sudo pkill -INT -x prism-fe.elf 2>/dev/null; sudo pkill -INT -x prism-be-http.e 2>/dev/null; sleep 1; sudo pkill -9 -x prism-fe.elf 2>/dev/null; sudo pkill -9 -x prism-be-http.e 2>/dev/null; for s in fe be0 be1 be2 be3; do tmux kill-session -t $s 2>/dev/null; done; true" >/dev/null 2>&1
+  ssh -o ConnectTimeout=5 node$N "sudo pkill -INT -x capy-proxy-fe.e 2>/dev/null; sudo pkill -INT -x capy-proxy-be.e 2>/dev/null; sleep 1; sudo pkill -9 -x capy-proxy-fe.e 2>/dev/null; sudo pkill -9 -x capy-proxy-be.e 2>/dev/null; sudo pkill -INT -x prism-fe.elf 2>/dev/null; sudo pkill -INT -x prism-be-http.e 2>/dev/null; sleep 1; sudo pkill -9 -x prism-fe.elf 2>/dev/null; sudo pkill -9 -x prism-be-http.e 2>/dev/null; sudo pkill -INT -x proxy-server-fe 2>/dev/null; sudo pkill -INT -x proxy-server-be 2>/dev/null; sleep 1; sudo pkill -9 -x proxy-server-fe 2>/dev/null; sudo pkill -9 -x proxy-server-be 2>/dev/null; for s in fe be0 be1 be2 be3; do tmux kill-session -t \$s 2>/dev/null; done; true" >/dev/null 2>&1
 done
 
 step "iokerneld (node5/6/7) + fig13 software switch (node7)"
