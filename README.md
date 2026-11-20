@@ -2,7 +2,7 @@
 
 Source release and artifact-evaluation kit for the SIGCOMM 2026 paper. The
 evaluated snapshot is release
-[`sigcomm26-ae-v1.2`](https://github.com/nus-sys/capybara-artifact/releases/tag/sigcomm26-ae-v1.2). Capybara
+[`sigcomm26-ae-v1.7`](https://github.com/nus-sys/capybara-artifact/releases/tag/sigcomm26-ae-v1.7). Capybara
 is an L4 load balancer that rebalances established TCP connections through
 microsecond-scale live connection migration, co-designed between a P4
 programmable switch and a kernel-bypass host stack (built on
@@ -46,10 +46,40 @@ On the testbed, each figure is one command from `~/capybara-AE-runs/`
 | >2x throughput at 12 servers under skew | Fig 10 | `bash fig10/run_fig10.sh quick` (or `full`) | ~40 / 80 min |
 | Benefits L7 LB; Prism collapses open-loop | Fig 11 | `bash fig11/run_fig11.sh` (or `full`) | ~45 / 70 min |
 | Migration <3 us CPU, <15 us e2e; TCP+TLS | Fig 14 | `bash fig14/run_fig14.sh` | ~9 min |
+| Migration overhead stays low at high frequency (added on reviewer request) | Fig 15 | `bash fig15/run_fig15.sh quick` (or `full`) | ~12 / 40 min |
+| Throughput scales linearly with server count; software switch is flat (added on reviewer request) | Fig 13 | `bash fig13/run_fig13.sh quick` (or `full`) | ~35 / 60 min |
 
 Each runner brings up the switch program and host stacks it needs, runs the
 experiment, regenerates the figure with the paper's own plotting code from
 that run's data, and restores the cluster to a clean baseline.
+
+## Running on your own hardware
+
+The runners in `AE/` are written for our testbed (`AE/ENVIRONMENT.md`). The
+steps below describe how that testbed is set up, as a guide for your own
+hardware:
+
+1. **Hardware and software.** We use an Intel Tofino switch (APS BF6064X-T,
+   SDE 9.4.0) and x86 machines with Mellanox ConnectX-5 100 GbE NICs. The
+   server machines run Ubuntu 22.04 with MLNX_OFED, DPDK 21.02 (mlx5 PMD) and
+   2 MB hugepages. `scripts/setup/` has helper scripts for the packages, DPDK
+   and hugepages.
+2. **Host stack.** Check out the branch or commit for the figure
+   (`AE/source/SOURCE.md`) and build with `make all-examples-rust`. The Cargo
+   features are set with `EXAMPLE_FEATURES`. For example, Fig 10 uses
+   `tcp-migration,server-rewriting,capy-time-log` (see `AE/fig10/README.md`).
+   The binaries are placed in `bin/examples/rust/`.
+3. **Host configuration.** Set your IP and MAC addresses, interface name, ARP
+   table and NIC PCI address in the `nodeN_config.yaml` files (their directory
+   is `CONFIG_DIR` in `linux.mk`).
+4. **Switch.** Compile the figure's P4 program (`p4/`, `AE/switch/`) with the
+   SDE, start it with `run_switchd.sh -p <program>`, and load its tables with
+   `run_bfshell.sh -b <setup script>`, after setting your port numbers and
+   server addresses in the setup script.
+5. **Load generator.** The clients use our Caladan fork, and Fig 11 also uses
+   `wrk`. `SOURCE.md` lists the branch for each figure.
+6. **Run.** The scripts in each `AE/figN/` show the full sequence for that
+   figure. Replace our host names, paths and addresses with yours.
 
 ## The artifact-evaluation kit (`AE/`)
 
